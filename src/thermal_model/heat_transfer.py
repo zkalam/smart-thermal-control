@@ -1,7 +1,6 @@
 """
-Heat Transfer Physics Module
 
-This module implements heat transfer mechanisms:
+This module is a library and implements heat transfer mechanisms:
 - Conduction (Fourier's Law)
 - Convection (Newton's Law of Cooling)
 - Radiation (Stefan-Boltzmann Law)
@@ -39,3 +38,52 @@ class GeometricProperties:
     area: float                # m² - heat transfer area
     volume: float              # m³ - volume for thermal mass
     thickness: Optional[float] = None  # m - wall thickness for conduction
+
+# Predefined material properties for common medical device materials
+class MaterialLibrary:
+    
+    # Metals
+    ALUMINUM = MaterialProperties(
+        thermal_conductivity=205.0,
+        density=2700.0,
+        specific_heat=900.0,
+        emissivity=0.1  # Polished aluminum
+    )
+    
+    STAINLESS_STEEL = MaterialProperties(
+        thermal_conductivity=16.0,
+        density=8000.0,
+        specific_heat=500.0,
+        emissivity=0.6
+    )
+    
+    # Plastics
+    ABS_PLASTIC = MaterialProperties(
+        thermal_conductivity=0.2,
+        density=1050.0,
+        specific_heat=1400.0,
+        emissivity=0.9
+    )
+    
+    POLYSTYRENE = MaterialProperties(
+        thermal_conductivity=0.13,
+        density=1050.0,
+        specific_heat=1300.0,
+        emissivity=0.9
+    )
+    
+    # Insulation
+    POLYURETHANE_FOAM = MaterialProperties(
+        thermal_conductivity=0.025,
+        density=30.0,
+        specific_heat=1400.0,
+        emissivity=0.95
+    )
+    
+    # Electronics
+    SILICON = MaterialProperties(
+        thermal_conductivity=150.0,
+        density=2330.0,
+        specific_heat=700.0,
+        emissivity=0.7
+    )
