@@ -10,17 +10,17 @@ This module implements heat transfer mechanisms:
 
 import numpy as np
 from typing import Optional, Union
-from dataclasses import data
+from dataclasses import dataclass
 import warnings
 
 
-@data
+@dataclass
 class MaterialProperties:
     # Physical properties of materials for heat transfer calculations
     thermal_conductivity: float  # W/mK - ability to conduct heat
     density: float              # kg/m³ - mass density
     specific_heat: float        # J/kgK - energy to raise temp by 1K
-    emissivity: float = 0.9     # 0-1, surface emissivity for radiation
+    emissivity: float     # 0-1, surface emissivity for radiation
     
     @property
     def thermal_diffusivity(self) -> float:
@@ -31,3 +31,11 @@ class MaterialProperties:
     def volumetric_heat_capacity(self) -> float:
         # Calculate volumetric heat capacity
         return self.density * self.specific_heat
+
+@dataclass
+class GeometricProperties:
+    # Geometric properties for heat transfer calculations
+    length: float              # m - characteristic length
+    area: float                # m² - heat transfer area
+    volume: float              # m³ - volume for thermal mass
+    thickness: Optional[float] = None  # m - wall thickness for conduction
