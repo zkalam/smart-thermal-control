@@ -348,29 +348,29 @@ class TestHeatTransferTemperatureConversion(unittest.TestCase):
     def test_celsius_to_kelvin(self):
         """Test Celsius to Kelvin conversion"""
         # Test standard conversions
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(0), 273.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(100), 373.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(-273.15), 0, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(20), 293.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(0), 273.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(100), 373.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(-273.15), 0, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(20), 293.15, places=10)
     
     def test_celsius_to_kelvin_below_absolute_zero(self):
         """Test that temperature below absolute zero raises ValueError"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.celsius_to_kelvin(-300)
+            celsius_to_kelvin(-300)
         self.assertIn("below absolute zero", str(context.exception))
     
     def test_kelvin_to_celsius(self):
         """Test Kelvin to Celsius conversion"""
         # Test standard conversions
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(273.15), 0, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(373.15), 100, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(0), -273.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(293.15), 20, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(273.15), 0, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(373.15), 100, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(0), -273.15, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(293.15), 20, places=10)
     
     def test_kelvin_to_celsius_negative_kelvin(self):
         """Test that negative Kelvin temperature raises ValueError"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.kelvin_to_celsius(-10)
+            kelvin_to_celsius(-10)
         self.assertIn("below absolute zero", str(context.exception))
 
 
@@ -394,7 +394,7 @@ class TestHeatTransferConduction(unittest.TestCase):
     
     def test_conduction_resistance(self):
         """Test conduction resistance calculation"""
-        R = HeatTransfer.conduction_resistance(self.material, self.geometry)
+        R = conduction_resistance(self.material, self.geometry)
         expected_R = 0.1 / (10.0 * 1.0)  # thickness / (k * area)
         self.assertAlmostEqual(R, expected_R, places=10)
     
@@ -404,7 +404,7 @@ class TestHeatTransferConduction(unittest.TestCase):
             length=1.0, area=1.0, volume=1.0
         )
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.conduction_resistance(self.material, geom_no_thickness)
+            conduction_resistance(self.material, geom_no_thickness)
         self.assertIn("Thickness required", str(context.exception))
     
     def test_conduction_resistance_zero_thickness(self):
@@ -413,12 +413,12 @@ class TestHeatTransferConduction(unittest.TestCase):
             geom_zero_thickness = GeometricProperties(
             length=1.0, area=1.0, volume=1.0, thickness=0.0
             )
-            HeatTransfer.conduction_resistance(self.material, geom_zero_thickness)
+            conduction_resistance(self.material, geom_zero_thickness)
         self.assertIn("Thickness must be positive if specified", str(context.exception))
     
     def test_conduction_heat_transfer(self):
         """Test conduction heat transfer calculation"""
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, self.geometry, temp_hot=100, temp_cold=50
         )
         expected_q = (10.0 * 1.0 * (100 - 50)) / 0.1  # k * A * ΔT / L
@@ -429,7 +429,7 @@ class TestHeatTransferConduction(unittest.TestCase):
         geom_no_thickness = GeometricProperties(
             length=0.2, area=1.0, volume=1.0
         )
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, geom_no_thickness, temp_hot=100, temp_cold=50
         )
         expected_q = (10.0 * 1.0 * (100 - 50)) / 0.2  # Uses length as thickness
@@ -437,7 +437,7 @@ class TestHeatTransferConduction(unittest.TestCase):
     
     def test_conduction_negative_temperature_difference(self):
         """Test conduction with negative temperature difference"""
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, self.geometry, temp_hot=50, temp_cold=100
         )
         expected_q = (10.0 * 1.0 * (50 - 100)) / 0.1  # Negative heat flow
@@ -459,7 +459,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_natural_vertical(self):
         """Test natural convection coefficient for vertical surface"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=50,
             temp_fluid=20,
@@ -471,7 +471,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_forced(self):
         """Test forced convection coefficient"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=50,
             temp_fluid=20,
@@ -483,7 +483,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_small_temperature_difference(self):
         """Test convection with very small temperature difference"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=20.05,
             temp_fluid=20.0,
@@ -496,7 +496,7 @@ class TestHeatTransferConvection(unittest.TestCase):
         """Test convection with unknown orientation generates warning"""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            h = HeatTransfer.get_convection_coefficient(
+            h = get_convection_coefficient(
                 length=1.0,
                 temp_surface=50,
                 temp_fluid=20,
@@ -509,7 +509,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_heat_transfer(self):
         """Test convection heat transfer calculation"""
-        q = HeatTransfer.convection_heat_transfer(
+        q = convection_heat_transfer(
             geometry=self.geometry,
             area=2.0,
             temp_surface=50,
@@ -521,7 +521,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_heat_transfer_cold_surface(self):
         """Test convection with cold surface"""
-        q = HeatTransfer.convection_heat_transfer(
+        q = convection_heat_transfer(
             geometry=self.geometry,
             area=2.0,
             temp_surface=10,
@@ -545,7 +545,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_heat_transfer(self):
         """Test radiation heat transfer calculation"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=100,
@@ -556,7 +556,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_same_temperature(self):
         """Test radiation with same temperatures"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=50,
@@ -566,7 +566,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_cold_to_hot(self):
         """Test radiation from cold to hot surface"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=20,
@@ -582,7 +582,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
             specific_heat=4000.0,
             emissivity=0.0
         )
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=material_no_emit,
             area=1.0,
             temp_hot_c=100,
@@ -601,7 +601,7 @@ class TestBloodThermalMass(unittest.TestCase):
     
     def test_calculate_blood_thermal_mass(self):
         """Test blood thermal mass calculation"""
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+        thermal_mass = calculate_blood_thermal_mass(
             blood_product=self.blood,
             volume_liters=0.5,
             container_material=self.container,
@@ -622,7 +622,7 @@ class TestBloodThermalMass(unittest.TestCase):
     def test_calculate_thermal_mass_invalid_volume(self):
         """Test thermal mass with invalid volume"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.calculate_blood_thermal_mass(
+            calculate_blood_thermal_mass(
                 blood_product=self.blood,
                 volume_liters=-0.5,
                 container_material=self.container,
@@ -633,7 +633,7 @@ class TestBloodThermalMass(unittest.TestCase):
     def test_calculate_thermal_mass_negative_container_mass(self):
         """Test thermal mass with negative container mass"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.calculate_blood_thermal_mass(
+            calculate_blood_thermal_mass(
                 blood_product=self.blood,
                 volume_liters=0.5,
                 container_material=self.container,
@@ -643,7 +643,7 @@ class TestBloodThermalMass(unittest.TestCase):
     
     def test_calculate_thermal_mass_zero_container_mass(self):
         """Test thermal mass with zero container mass"""
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+        thermal_mass = calculate_blood_thermal_mass(
             blood_product=self.blood,
             volume_liters=0.5,
             container_material=self.container,
@@ -678,7 +678,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         )
         
         # Calculate thermal mass
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+        thermal_mass = calculate_blood_thermal_mass(
             blood_product=blood,
             volume_liters=0.5,
             container_material=container,
@@ -686,14 +686,14 @@ class TestIntegrationScenarios(unittest.TestCase):
         )
         
         # Calculate heat transfer rates
-        q_conduction = HeatTransfer.conduction_heat_transfer(
+        q_conduction = conduction_heat_transfer(
             material=container,
             geometry=bag_geometry,
             temp_hot=25,  # Room temperature
             temp_cold=4   # Target blood temperature
         )
         
-        q_convection = HeatTransfer.convection_heat_transfer(
+        q_convection = convection_heat_transfer(
             geometry=bag_geometry,
             area=bag_geometry.area,
             temp_surface=4,
@@ -701,7 +701,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             orientation='vertical'
         )
         
-        q_radiation = HeatTransfer.radiation_heat_transfer(
+        q_radiation = radiation_heat_transfer(
             material=container,
             area=bag_geometry.area,
             temp_hot_c=25,
@@ -739,7 +739,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         cooler_temp = 4.0  # Cooler environment
         
         # Calculate thermal mass - important for cooling time estimation
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+        thermal_mass = calculate_blood_thermal_mass(
             blood_product=blood,
             volume_liters=0.5,
             container_material=container,
@@ -747,14 +747,14 @@ class TestIntegrationScenarios(unittest.TestCase):
         )
         
         # Calculate heat transfer rates (heat leaving the warm bag)
-        q_conduction = HeatTransfer.conduction_heat_transfer(
+        q_conduction = conduction_heat_transfer(
             material=container,
             geometry=bag_geometry,
             temp_hot=bag_temp,  # Warm bag
             temp_cold=cooler_temp  # Cold cooler
         )
         
-        q_convection = HeatTransfer.convection_heat_transfer(
+        q_convection = convection_heat_transfer(
             geometry=bag_geometry,
             area=bag_geometry.area,
             temp_surface=bag_temp,  # Warm bag surface
@@ -762,7 +762,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             orientation='vertical'
         )
         
-        q_radiation = HeatTransfer.radiation_heat_transfer(
+        q_radiation = radiation_heat_transfer(
             material=container,
             area=bag_geometry.area,
             temp_hot_c=bag_temp,  # Warm bag
