@@ -14,6 +14,12 @@ This system provides automated, precise temperature control for critical blood s
 
 Think of it as a medical-grade smart thermostat with the precision and reliability required for life-critical blood storage applications.
 
+## Project Disclaimer
+
+This project was developed with the assistance of AI coding tools as a learning exercise in software development and control systems design. The primary intent is educational - to practice applying software engineering principles, thermal physics modeling, and control theory in a real-world medical application context.
+
+**Important**: While this project aims for medical-grade precision and follows industry standards, it is developed for educational purposes and should not be used in actual medical applications without proper validation, testing, and regulatory approval.
+
 ## Project Structure
 
 smart-thermal-control/
@@ -30,6 +36,11 @@ smart-thermal-control/
 │   └── dashboard/              # User interface and monitoring
 │       ├── __init__.py
 │       └── [dashboard files]
+├── docs/
+│   ├── technical/
+│   │   ├── thermal_model.md           # Making the model
+│   └── medical/
+│       ├── blood_storage_requirements.md  # Medical standards & specs
 ├── __init__.py            
 ├── requirements.txt            # Python dependencies
 ├── pytest.ini                  # configuration file for pytest
