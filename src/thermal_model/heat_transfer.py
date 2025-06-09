@@ -33,7 +33,6 @@ class HeatTransfer:
     Calculate thermal resistance for conduction through a material
     
     For planar geometry: R = thickness / (k × area)
-    For cylindrical: R = ln(r_outer/r_inner) / (2π × k × length)
     
     Args:
         material: Material thermal properties
