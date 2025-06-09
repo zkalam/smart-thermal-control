@@ -8,10 +8,37 @@ This module is a library and implements heat transfer mechanisms:
 """
 
 import numpy as np
-from typing import Optional, Union
+from typing import Optional, NamedTuple
 from dataclasses import dataclass
 import warnings
 
+
+# Immutable physical constants
+class PhysicalConstantsType(NamedTuple):
+    
+    stefan_boltzmann: float    # W/(m²·K⁴) - Stefan-Boltzmann constant for radiation
+    boltzmann: float          # J/K - Boltzmann constant
+    gas_constant: float       # J/(mol·K) - Universal gas constant
+    gravity: float            # m/s² - Standard gravity for natural convection
+    atm_pressure: float       # Pa - Standard atmospheric pressure
+    
+    # Temperature reference points
+    absolute_zero: float      # K - 0 K in Kelvin
+    water_freezing: float     # K - 273.15 K (0°C)
+    water_boiling: float      # K - 373.15 K (100°C)
+    room_temperature: float   # K - 293.15 K (20°C)
+
+CONSTANTS = PhysicalConstantsType(
+    stefan_boltzmann=5.670374419e-8,
+    boltzmann=1.380649e-23,
+    gas_constant=8.314462618,
+    gravity=9.80665,
+    atm_pressure=101325.0,
+    absolute_zero=0.0,
+    water_freezing=273.15,
+    water_boiling=373.15,
+    room_temperature=293.15
+)
 
 @dataclass
 class MaterialProperties:
