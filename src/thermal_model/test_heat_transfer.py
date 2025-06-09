@@ -590,6 +590,36 @@ class TestHeatTransferRadiation(unittest.TestCase):
         )
         self.assertAlmostEqual(q, 0, places=10)
 
+class TestThermalCapacitance(unittest.TestCase):
+    """Test thermal capacitance calculations"""
+    def setUp(self):
+        """Set up test material"""
+        self.material = MaterialProperties(
+            thermal_conductivity=10.0,
+            density=1000.0,
+            specific_heat=4000.0,
+            emissivity=0.8
+        )
+
+    def test_capacitance_typical_mass(self):
+        """Test capacitance with typical mass"""
+        mass = 2.0  # kg
+        expected = mass * self.material.specific_heat
+        result = calculate_thermal_capacitance(self.material, mass)
+        self.assertAlmostEqual(result, expected)
+
+    def test_capacitance_zero_mass(self):
+        """Capacitance should be 0 when mass is 0"""
+        result = calculate_thermal_capacitance(self.material, 0)
+        self.assertEqual(result, 0.0)
+
+    def test_capacitance_negative_mass(self):
+        """Capacitance with negative mass should return negative result"""
+        mass = -1.0
+        expected = mass * self.material.specific_heat
+        result = calculate_thermal_capacitance(self.material, mass)
+        self.assertEqual(result, expected)
+    
 
 class TestBloodThermalMass(unittest.TestCase):
     """Test blood thermal mass calculations"""

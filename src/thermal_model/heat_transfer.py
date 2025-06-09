@@ -203,6 +203,15 @@ def radiation_heat_transfer(material: MaterialProperties, area: float, temp_hot_
     return q_rad
 
 """
+Calculate thermal capacitance (J/K) for temperature change calculations
+
+"""
+def calculate_thermal_capacitance(material: MaterialProperties, mass: float) -> float:
+
+    return mass * material.specific_heat
+
+
+"""
 Calculate effective thermal mass including blood and container
 
 """
@@ -219,7 +228,7 @@ def calculate_blood_thermal_mass(blood_product: BloodProperties, volume_liters: 
     blood_thermal_mass = (blood_mass_kg * blood_product.specific_heat * blood_product.thermal_mass_factor)
     
     # Container thermal mass
-    container_thermal_mass = container_mass_kg * container_material.specific_heat
+    container_thermal_mass = calculate_thermal_capacitance(container_material, container_mass_kg)
     
     return blood_thermal_mass + container_thermal_mass
 
