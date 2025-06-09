@@ -1,20 +1,16 @@
 # Smart Thermal Control
 
-A digital twin thermal control system implementing advanced PID regulation for medical device applications. This project demonstrates real-time temperature control through mathematical modeling, simulation, and interactive visualization.
+A Python-based temperature control system specifically for blood storage applications, ensuring optimal storage conditions for life-saving blood products through intelligent monitoring and control algorithms.
 
 ## Project Overview
 
-This system models and controls temperature-sensitive medical devices (such as insulin coolers or portable medical sensors) using:
+This system provides automated, precise temperature control for critical blood storage scenarios including:
 
-- **Mathematical modeling** of heat transfer physics (conduction, convection, radiation)
-- **PID control system** with real-time tuning capabilities
-- **Digital twin simulation** for testing and validation
-- **Interactive dashboard** for monitoring and control
+- Blood Banks & Hospitals: Whole blood and red blood cell storage (1-6°C)
+- Plasma Centers: Fresh frozen plasma storage (-18°C or below)
+- Mobile Blood Units: Temperature-controlled transport containers
+- Emergency Medical Services: Portable blood storage for field operations
+- Research Facilities: Temperature-sensitive blood component storage
 
-## Technical Highlights
+Think of it as a medical-grade smart thermostat with the precision and reliability required for life-critical blood storage applications.
 
-### Mathematical Foundation
-- **Heat Transfer Modeling**: Multi-mode heat transfer equations with thermal resistance networks
-- **System Dynamics**: First-principles differential equations for energy balance
-- **Linearization**: State-space representation for control system design
-- **Thermal Capacitance**: Realistic modeling of thermal mass and time constants
