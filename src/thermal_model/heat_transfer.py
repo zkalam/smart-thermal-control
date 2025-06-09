@@ -1,6 +1,6 @@
 """
 
-This module implements heat transfer mechanisms:
+This module implements heat transfer mechanisms in the context of blood storage:
 - Conduction (Fourier's Law)
 - Convection (Newton's Law of Cooling)
 - Radiation (Stefan-Boltzmann Law)
@@ -8,6 +8,7 @@ This module implements heat transfer mechanisms:
 """
 
 import numpy as np
+from typing import Tuple
 from heat_transfer_data import *
 import warnings
 
@@ -187,3 +188,72 @@ class HeatTransfer:
         q_rad = (material.emissivity * CONSTANTS.stefan_boltzmann * area * (temp_hot_k**4 - temp_cold_k**4))
         
         return q_rad
+    
+    """
+    Calculate effective thermal mass including blood and container
+    
+    """
+    @staticmethod
+    def calculate_blood_thermal_mass(blood_product: BloodProperties, volume_liters: float, container_material: MaterialProperties, container_mass_kg: float) -> float:
+
+        if volume_liters <= 0 or container_mass_kg < 0:
+            raise ValueError("Volume must be positive, container mass non-negative")
+        
+        # Convert volume to m³
+        volume_m3 = volume_liters / 1000.0
+        
+        # Calculate blood thermal mass using actual blood properties
+        blood_mass_kg = blood_product.density * volume_m3
+        blood_thermal_mass = (blood_mass_kg * blood_product.specific_heat * blood_product.thermal_mass_factor)
+        
+        # Container thermal mass
+        container_thermal_mass = container_mass_kg * container_material.specific_heat
+        
+        return blood_thermal_mass + container_thermal_mass
+
+
+# Blood storage safety validation and alarm system to comply with FDA limits
+class SafetySystem:
+
+    """
+    Validate temperature meets FDA requirements
+    
+    Returns:
+        (is_safe, status_message)
+    """
+    @staticmethod
+    def validate_storage_temperature(blood_product: BloodProperties, current_temp_c: float) -> Tuple[bool, str]:
+
+        if current_temp_c > blood_product.critical_temp_high_c:
+            return False, f"CRITICAL: Temperature {current_temp_c:.1f}°C exceeds maximum safe limit {blood_product.critical_temp_high_c}°C"
+        
+        if current_temp_c < blood_product.critical_temp_low_c:
+            return False, f"CRITICAL: Temperature {current_temp_c:.1f}°C below minimum safe limit {blood_product.critical_temp_low_c}°C"
+        
+        # Check warning thresholds
+        warning_high = blood_product.target_temp_c + blood_product.temp_tolerance_c
+        warning_low = blood_product.target_temp_c - blood_product.temp_tolerance_c
+        
+        if current_temp_c > warning_high:
+            return True, f"WARNING: Temperature {current_temp_c:.1f}°C above target range"
+        
+        if current_temp_c < warning_low:
+            return True, f"WARNING: Temperature {current_temp_c:.1f}°C below target range"
+        
+        return True, f"NORMAL: Temperature {current_temp_c:.1f}°C within safe range"
+
+    """
+    Return alarm temperature thresholds
+    
+    Returns:
+        (warning_low, warning_high, critical_low, critical_high)
+    """
+
+    @staticmethod
+    def temperature_alarm_thresholds(blood_product: BloodProperties) -> Tuple[float, float, float, float]:
+
+        warning_low = blood_product.target_temp_c - blood_product.temp_tolerance_c
+        warning_high = blood_product.target_temp_c + blood_product.temp_tolerance_c
+        
+        return (warning_low, warning_high, 
+                blood_product.critical_temp_low_c, blood_product.critical_temp_high_c)
