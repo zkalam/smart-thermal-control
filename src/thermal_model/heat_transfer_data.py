@@ -210,7 +210,7 @@ class MaterialLibrary:
     PLASMA = BloodProperties(
         blood_type="Fresh Frozen Plasma",
         target_temp_c=-18.0,
-        temp_tolerance_c=0.0,       # Fixed: No tolerance above -18°C
+        temp_tolerance_c=0.0,       # No tolerance above -18°C
         critical_temp_high_c=-18.0, # FDA requirement: must be ≤-18°C
         critical_temp_low_c=-80.0,  # Practical lower limit
         density=1025.0,
