@@ -6,7 +6,7 @@ import unittest
 import pytest
 from unittest.mock import patch
 import warnings
-from heat_transfer_data import (
+from .heat_transfer_data import (
     TemperatureUnit, CONSTANTS, MaterialProperties, GeometricProperties, 
     BloodProperties, MaterialLibrary
 )
