@@ -409,10 +409,10 @@ class TestHeatTransferConduction(unittest.TestCase):
     
     def test_conduction_resistance_zero_thickness(self):
         """Test that zero thickness raises ValueError"""
-        geom_zero_thickness = GeometricProperties(
-            length=1.0, area=1.0, volume=1.0, thickness=0.0
-        )
         with self.assertRaises(ValueError) as context:
+            geom_zero_thickness = GeometricProperties(
+            length=1.0, area=1.0, volume=1.0, thickness=0.0
+            )
             HeatTransfer.conduction_resistance(self.material, geom_zero_thickness)
         self.assertIn("Thickness must be positive if specified", str(context.exception))
     
