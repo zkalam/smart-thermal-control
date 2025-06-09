@@ -1,13 +1,9 @@
 """
 Unit tests for heat transfer model
 """
-import sys
-import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
-
-from thermal_model.heat_transfer import *
-from thermal_model.heat_transfer_data import *
+from heat_transfer import *
+from heat_transfer_data import *
 import unittest
 from unittest.mock import patch
 import warnings
