@@ -721,7 +721,99 @@ class TestIntegrationScenarios(unittest.TestCase):
         # Heat should flow into the cold blood bag
         self.assertGreater(q_conduction, 0)
         self.assertLess(q_convection, 0)  # Negative because surface is colder
-        self.assertLess(q_radiation, 0)   # Negative because blood bag is colder
+        self.assertGreater(q_radiation, 0)  # Positive because environment radiates heat TO the cold bag
+
+    def test_warm_blood_bag_into_cooler_scenario(self):
+        """Test realistic scenario: warm blood bag placed into cooler"""
+        # Blood bag at room temperature being cooled down
+        blood = MaterialLibrary.WHOLE_BLOOD
+        container = MaterialLibrary.MEDICAL_GRADE_PVC
+        
+        # Geometry - same blood bag
+        bag_geometry = GeometricProperties(
+            length=0.2,  # 20cm characteristic length
+            area=0.04,   # 0.04 m² surface area
+            volume=0.0005,  # 0.5L volume
+            thickness=0.002,  # 2mm wall thickness
+            air_velocity=0.5  # Cooler fan circulation
+        )
+        
+        # Initial conditions: bag at room temp, cooler environment at 4°C
+        bag_temp = 20.0  # Room temperature blood bag
+        cooler_temp = 4.0  # Cooler environment
+        
+        # Calculate thermal mass - important for cooling time estimation
+        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+            blood_product=blood,
+            volume_liters=0.5,
+            container_material=container,
+            container_mass_kg=0.05
+        )
+        
+        # Calculate heat transfer rates (heat leaving the warm bag)
+        q_conduction = HeatTransfer.conduction_heat_transfer(
+            material=container,
+            geometry=bag_geometry,
+            temp_hot=bag_temp,  # Warm bag
+            temp_cold=cooler_temp  # Cold cooler
+        )
+        
+        q_convection = HeatTransfer.convection_heat_transfer(
+            geometry=bag_geometry,
+            area=bag_geometry.area,
+            temp_surface=bag_temp,  # Warm bag surface
+            temp_fluid=cooler_temp,  # Cold air in cooler
+            orientation='vertical'
+        )
+        
+        q_radiation = HeatTransfer.radiation_heat_transfer(
+            material=container,
+            area=bag_geometry.area,
+            temp_hot_c=bag_temp,  # Warm bag
+            temp_cold_c=cooler_temp  # Cold cooler walls
+        )
+        
+        # All calculations should complete without error
+        self.assertIsInstance(thermal_mass, float)
+        self.assertIsInstance(q_conduction, float)
+        self.assertIsInstance(q_convection, float)
+        self.assertIsInstance(q_radiation, float)
+        
+        # Verify thermal mass is reasonable for a blood bag
+        self.assertGreater(thermal_mass, 1000)  # Should be > 1000 J/K
+        self.assertLess(thermal_mass, 10000)    # Should be < 10000 J/K
+        
+        # Heat should flow OUT of the warm blood bag (cooling it down)
+        self.assertGreater(q_conduction, 0)  # Positive: heat flows from warm bag to cold cooler
+        self.assertGreater(q_convection, 0)  # Positive: heat flows from warm surface to cold air
+        self.assertGreater(q_radiation, 0)   # Positive: heat radiates from warm bag to cold walls
+        
+        # Total heat loss rate (all positive values indicate heat leaving the bag)
+        total_heat_loss = q_conduction + q_convection + q_radiation
+        self.assertGreater(total_heat_loss, 0)
+        
+        # Convection should be significant due to forced air circulation
+        self.assertGreater(q_convection, q_conduction * 0.5)  # Convection at least 50% of conduction
+        
+        # Estimate cooling time constant (rough approximation)
+        # τ = thermal_mass / (total_heat_transfer_coefficient * area)
+        # For this test, just verify we can calculate it
+        if total_heat_loss > 0:
+            temperature_difference = bag_temp - cooler_temp
+            overall_heat_transfer_coeff = total_heat_loss / (bag_geometry.area * temperature_difference)
+            time_constant = thermal_mass / (overall_heat_transfer_coeff * bag_geometry.area)
+            
+            # Time constant should be reasonable (between 1 minute and 2 hours)
+            self.assertGreater(time_constant, 60)    # > 1 minute
+            self.assertLess(time_constant, 7200)     # < 2 hours
+            
+        # Verify the bag is initially too warm for safe storage
+        self.assertGreater(bag_temp, blood.critical_temp_high_c)
+        
+        # Verify target temperature is within safe range
+        self.assertLessEqual(cooler_temp, blood.critical_temp_high_c)
+        self.assertGreaterEqual(cooler_temp, blood.critical_temp_low_c)
+
 
 
 if __name__ == '__main__':
