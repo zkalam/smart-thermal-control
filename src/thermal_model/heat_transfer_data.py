@@ -3,11 +3,9 @@
 This module is a library and defines physical properties needed for a model
 
 """
-import numpy as np
 from typing import Optional, NamedTuple
 from dataclasses import dataclass
 from enum import Enum
-import warnings
 
 class TemperatureUnit(Enum):
     CELSIUS = "°C"
@@ -25,13 +23,6 @@ class PhysicalConstantsType(NamedTuple):
     water_freezing_c: float   # °C - Water freezing point
     room_temperature_c: float # °C - Standard room temperature
 
-    # Convective heat transfer coefficients in air (different scenarios)
-    still_air: float       # Natural convection in still air
-    forced_air: float      # Forced convection cooling
-    refrigerated: float    # Inside refrigerator
-    transport: float       # Mobile transport container
-    emergency: float       # Emergency backup conditions
-
 
 CONSTANTS = PhysicalConstantsType(
     stefan_boltzmann=5.670374419e-8,  
@@ -39,11 +30,6 @@ CONSTANTS = PhysicalConstantsType(
     absolute_zero_c=-273.15,
     water_freezing_c=0.0,
     room_temperature_c=20.0
-    still_air=5.0      # Natural convection in still air
-    forced_air=25.0      # Forced convection cooling
-    refrigerated=15.0    # Inside refrigerator
-    transport=10.0       # Mobile transport container
-    emergency=8.0      # Emergency backup conditions
 )
 
 @dataclass
@@ -73,6 +59,7 @@ class GeometricProperties:
     area: float                # m² - heat transfer area
     volume: float              # m³ - volume for thermal mass
     thickness: Optional[float] = None  # m - wall thickness for conduction
+    air_velocity: Optional[float] = None # m/s air velocity for convection
 
     def __post_init__(self):
         # Validate geometric properties
@@ -80,6 +67,8 @@ class GeometricProperties:
             raise ValueError("All geometric dimensions must be positive")
         if self.thickness is not None and self.thickness <= 0:
             raise ValueError("Thickness must be positive if specified")
+        if self.air_velocity is not None and self.air_velocity < 0:
+            raise ValueError("Air velocity must be greater than or equal to zero")
 
 
 @dataclass
