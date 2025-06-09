@@ -414,7 +414,7 @@ class TestHeatTransferConduction(unittest.TestCase):
         )
         with self.assertRaises(ValueError) as context:
             HeatTransfer.conduction_resistance(self.material, geom_zero_thickness)
-        self.assertIn("Thickness must be positive", str(context.exception))
+        self.assertIn("Thickness must be positive if specified", str(context.exception))
     
     def test_conduction_heat_transfer(self):
         """Test conduction heat transfer calculation"""
