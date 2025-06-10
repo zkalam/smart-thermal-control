@@ -1,6 +1,6 @@
 # Smart Thermal Control
 
-A Python-based temperature control system specifically for blood storage applications, ensuring optimal storage conditions for life-saving blood products through intelligent monitoring and control algorithms.
+**A Python-based temperature control system for critical blood storage applications**
 
 ## Project Overview
 
@@ -14,11 +14,37 @@ This system provides automated, precise temperature control for critical blood s
 
 Think of it as a medical-grade smart thermostat with the precision and reliability required for blood storage applications.
 
+## Development Approach & Transparency
+
+This project was developed using modern AI-assisted engineering workflows as a learning exercise in software development and control systems design. The development process involved:
+
+**My Engineering Contributions:**
+- **Problem Definition**: Identified blood storage thermal control as a complex, safety-critical challenge
+- **System Architecture**: Designed modular structure separating thermal physics, control algorithms, and simulation
+- **Requirements Research**: Verified FDA blood storage regulations and medical device standards
+- **Technical Direction**: Guided AI code generation through iterative prompting and requirements refinement
+- **Code Review & Validation**: Reviewed, tested, and modified all generated code to ensure correctness
+- **Integration & Testing**: Ensured all components work together 
+
+**AI-Assisted Implementation:**
+- Code generation for thermal physics calculations and data structures
+- Unit test framework development and test case implementation
+- Documentation structure and technical writing
+- Boilerplate code and standard software engineering patterns
+
+**My Role**: Engineering lead and technical reviewer - responsible for all design decisions, requirements validation, and quality assurance. Can explain and defend the system design and implementation.
+
 ## Project Disclaimer
 
-This project was developed with the assistance of AI tools as a learning exercise in software development and control systems design. The primary intent is educational - to practice applying software engineering principles, thermal physics modeling, and control theory in a real-world medical application context.
+**Important**: While this project aims for medical-grade precision, it is developed for self-learning purposes and should not be used in actual medical applications without proper validation, testing, and regulatory approval.
 
-**Important**: While this project aims for medical-grade precision, it is developed for educational purposes and should not be used in actual medical applications without proper validation, testing, and regulatory approval.
+## Technical Skills Demonstrated
+
+- **AI-Assisted Development**: Effective collaboration with AI tools for rapid prototyping
+- **System Design**: Modular architecture for complex engineering systems
+- **Domain Research**: Understanding medical device requirements and thermal physics
+- **Code Review**: Validating and improving AI-generated implementations
+- **Quality Assurance**: Testing safety-critical applications
 
 ## Project Structure
 
