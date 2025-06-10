@@ -78,7 +78,7 @@ smart-thermal-control/
 Contains the core heat transfer physics calculations:
 - **heat_transfer.py**: Heat transfer mechanisms (conduction, convection, radiation)
 - **heat_transfer_data.py**: Material properties and blood product specifications
-- **test_heat_transfer.py**: Unit testing
+- **test_thermal_model.py**: Unit testing
 
 ### `src/controller/`
 Temperature control algorithms and safety systems:
