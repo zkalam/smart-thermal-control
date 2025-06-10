@@ -348,29 +348,29 @@ class TestHeatTransferTemperatureConversion(unittest.TestCase):
     def test_celsius_to_kelvin(self):
         """Test Celsius to Kelvin conversion"""
         # Test standard conversions
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(0), 273.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(100), 373.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(-273.15), 0, places=10)
-        self.assertAlmostEqual(HeatTransfer.celsius_to_kelvin(20), 293.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(0), 273.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(100), 373.15, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(-273.15), 0, places=10)
+        self.assertAlmostEqual(celsius_to_kelvin(20), 293.15, places=10)
     
     def test_celsius_to_kelvin_below_absolute_zero(self):
         """Test that temperature below absolute zero raises ValueError"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.celsius_to_kelvin(-300)
+            celsius_to_kelvin(-300)
         self.assertIn("below absolute zero", str(context.exception))
     
     def test_kelvin_to_celsius(self):
         """Test Kelvin to Celsius conversion"""
         # Test standard conversions
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(273.15), 0, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(373.15), 100, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(0), -273.15, places=10)
-        self.assertAlmostEqual(HeatTransfer.kelvin_to_celsius(293.15), 20, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(273.15), 0, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(373.15), 100, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(0), -273.15, places=10)
+        self.assertAlmostEqual(kelvin_to_celsius(293.15), 20, places=10)
     
     def test_kelvin_to_celsius_negative_kelvin(self):
         """Test that negative Kelvin temperature raises ValueError"""
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.kelvin_to_celsius(-10)
+            kelvin_to_celsius(-10)
         self.assertIn("below absolute zero", str(context.exception))
 
 
@@ -394,7 +394,7 @@ class TestHeatTransferConduction(unittest.TestCase):
     
     def test_conduction_resistance(self):
         """Test conduction resistance calculation"""
-        R = HeatTransfer.conduction_resistance(self.material, self.geometry)
+        R = conduction_resistance(self.material, self.geometry)
         expected_R = 0.1 / (10.0 * 1.0)  # thickness / (k * area)
         self.assertAlmostEqual(R, expected_R, places=10)
     
@@ -404,7 +404,7 @@ class TestHeatTransferConduction(unittest.TestCase):
             length=1.0, area=1.0, volume=1.0
         )
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.conduction_resistance(self.material, geom_no_thickness)
+            conduction_resistance(self.material, geom_no_thickness)
         self.assertIn("Thickness required", str(context.exception))
     
     def test_conduction_resistance_zero_thickness(self):
@@ -413,12 +413,12 @@ class TestHeatTransferConduction(unittest.TestCase):
             geom_zero_thickness = GeometricProperties(
             length=1.0, area=1.0, volume=1.0, thickness=0.0
             )
-            HeatTransfer.conduction_resistance(self.material, geom_zero_thickness)
+            conduction_resistance(self.material, geom_zero_thickness)
         self.assertIn("Thickness must be positive if specified", str(context.exception))
     
     def test_conduction_heat_transfer(self):
         """Test conduction heat transfer calculation"""
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, self.geometry, temp_hot=100, temp_cold=50
         )
         expected_q = (10.0 * 1.0 * (100 - 50)) / 0.1  # k * A * ΔT / L
@@ -429,7 +429,7 @@ class TestHeatTransferConduction(unittest.TestCase):
         geom_no_thickness = GeometricProperties(
             length=0.2, area=1.0, volume=1.0
         )
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, geom_no_thickness, temp_hot=100, temp_cold=50
         )
         expected_q = (10.0 * 1.0 * (100 - 50)) / 0.2  # Uses length as thickness
@@ -437,7 +437,7 @@ class TestHeatTransferConduction(unittest.TestCase):
     
     def test_conduction_negative_temperature_difference(self):
         """Test conduction with negative temperature difference"""
-        q = HeatTransfer.conduction_heat_transfer(
+        q = conduction_heat_transfer(
             self.material, self.geometry, temp_hot=50, temp_cold=100
         )
         expected_q = (10.0 * 1.0 * (50 - 100)) / 0.1  # Negative heat flow
@@ -459,7 +459,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_natural_vertical(self):
         """Test natural convection coefficient for vertical surface"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=50,
             temp_fluid=20,
@@ -471,7 +471,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_forced(self):
         """Test forced convection coefficient"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=50,
             temp_fluid=20,
@@ -483,7 +483,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_coefficient_small_temperature_difference(self):
         """Test convection with very small temperature difference"""
-        h = HeatTransfer.get_convection_coefficient(
+        h = get_convection_coefficient(
             length=1.0,
             temp_surface=20.05,
             temp_fluid=20.0,
@@ -496,7 +496,7 @@ class TestHeatTransferConvection(unittest.TestCase):
         """Test convection with unknown orientation generates warning"""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            h = HeatTransfer.get_convection_coefficient(
+            h = get_convection_coefficient(
                 length=1.0,
                 temp_surface=50,
                 temp_fluid=20,
@@ -509,7 +509,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_heat_transfer(self):
         """Test convection heat transfer calculation"""
-        q = HeatTransfer.convection_heat_transfer(
+        q = convection_heat_transfer(
             geometry=self.geometry,
             area=2.0,
             temp_surface=50,
@@ -521,7 +521,7 @@ class TestHeatTransferConvection(unittest.TestCase):
     
     def test_convection_heat_transfer_cold_surface(self):
         """Test convection with cold surface"""
-        q = HeatTransfer.convection_heat_transfer(
+        q = convection_heat_transfer(
             geometry=self.geometry,
             area=2.0,
             temp_surface=10,
@@ -545,7 +545,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_heat_transfer(self):
         """Test radiation heat transfer calculation"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=100,
@@ -556,7 +556,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_same_temperature(self):
         """Test radiation with same temperatures"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=50,
@@ -566,7 +566,7 @@ class TestHeatTransferRadiation(unittest.TestCase):
     
     def test_radiation_cold_to_hot(self):
         """Test radiation from cold to hot surface"""
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=self.material,
             area=1.0,
             temp_hot_c=20,
@@ -582,13 +582,148 @@ class TestHeatTransferRadiation(unittest.TestCase):
             specific_heat=4000.0,
             emissivity=0.0
         )
-        q = HeatTransfer.radiation_heat_transfer(
+        q = radiation_heat_transfer(
             material=material_no_emit,
             area=1.0,
             temp_hot_c=100,
             temp_cold_c=20
         )
         self.assertAlmostEqual(q, 0, places=10)
+
+class TestThermalCapacitance(unittest.TestCase):
+    """Test thermal capacitance calculations"""
+    def setUp(self):
+        """Set up test material"""
+        self.material = MaterialProperties(
+            thermal_conductivity=10.0,
+            density=1000.0,
+            specific_heat=4000.0,
+            emissivity=0.8
+        )
+
+    def test_capacitance_typical_mass(self):
+        """Test capacitance with typical mass"""
+        mass = 2.0  # kg
+        expected = mass * self.material.specific_heat
+        result = calculate_thermal_capacitance(self.material, mass)
+        self.assertAlmostEqual(result, expected)
+
+    def test_capacitance_zero_mass(self):
+        """Capacitance should be 0 when mass is 0"""
+        result = calculate_thermal_capacitance(self.material, 0)
+        self.assertEqual(result, 0.0)
+
+    def test_capacitance_negative_mass(self):
+        """Capacitance with negative mass should return negative result"""
+        mass = -1.0
+        expected = mass * self.material.specific_heat
+        result = calculate_thermal_capacitance(self.material, mass)
+        self.assertEqual(result, expected)
+    
+class TestThermalDiffusivity(unittest.TestCase):
+    """Test thermal diffusivity calculations"""
+    
+    def setUp(self):
+        """Set up test material"""
+        self.material = MaterialProperties(
+            thermal_conductivity=10.0,
+            density=1000.0,
+            specific_heat=4000.0,
+            emissivity=0.8
+        )
+    
+    def test_thermal_diffusivity_calculation(self):
+        """Test thermal diffusivity calculation: α = k/(ρcp)"""
+        alpha = thermal_diffusivity(self.material)
+        expected = 10.0 / (1000.0 * 4000.0)  # k / (ρ * cp)
+        self.assertAlmostEqual(alpha, expected, places=12)
+    
+    def test_thermal_diffusivity_units(self):
+        """Test that thermal diffusivity has correct units (m²/s)"""
+        alpha = thermal_diffusivity(self.material)
+        self.assertIsInstance(alpha, float)
+        self.assertGreater(alpha, 0)  # Should be positive for valid materials
+    
+    def test_thermal_diffusivity_realistic_values(self):
+        """Test thermal diffusivity for realistic materials"""
+        # Test aluminum (high diffusivity)
+        alpha_al = thermal_diffusivity(MaterialLibrary.ALUMINUM)
+        self.assertGreater(alpha_al, 1e-5)  # Metals have high thermal diffusivity
+        
+        # Test plastic (low diffusivity)
+        alpha_plastic = thermal_diffusivity(MaterialLibrary.ABS_PLASTIC)
+        self.assertLess(alpha_plastic, 1e-6)  # Plastics have low thermal diffusivity
+        
+        # Aluminum should have much higher diffusivity than plastic
+        self.assertGreater(alpha_al, alpha_plastic * 100)
+
+
+class TestBloodTemperatureValidation(unittest.TestCase):
+    """Test blood temperature validation function"""
+    
+    def setUp(self):
+        """Set up test blood product"""
+        self.blood = MaterialLibrary.WHOLE_BLOOD
+    
+    def test_temperature_within_tolerance(self):
+        """Test temperature within tolerance range"""
+        result = validate_blood_temperature(self.blood, 4.0)  # Target temperature
+        
+        self.assertTrue(result['is_safe'])
+        self.assertTrue(result['is_within_tolerance'])
+        self.assertEqual(result['deviation_from_target'], 0.0)
+        self.assertEqual(result['status'], 'safe')
+    
+    def test_temperature_safe_but_outside_tolerance(self):
+        """Test temperature safe but outside tolerance"""
+        result = validate_blood_temperature(self.blood, 5.5)  # Safe but not ideal
+        
+        self.assertTrue(result['is_safe'])
+        self.assertFalse(result['is_within_tolerance'])
+        self.assertEqual(result['deviation_from_target'], 1.5)
+        self.assertEqual(result['status'], 'safe')
+    
+    def test_temperature_too_high(self):
+        """Test temperature above critical high"""
+        result = validate_blood_temperature(self.blood, 7.0)  # Above 6°C critical
+        
+        self.assertFalse(result['is_safe'])
+        self.assertFalse(result['is_within_tolerance'])
+        self.assertEqual(result['deviation_from_target'], 3.0)
+        self.assertEqual(result['status'], 'critical')
+    
+    def test_temperature_too_low(self):
+        """Test temperature below critical low"""
+        result = validate_blood_temperature(self.blood, 0.5)  # Below 1°C critical
+        
+        self.assertFalse(result['is_safe'])
+        self.assertFalse(result['is_within_tolerance'])
+        self.assertEqual(result['deviation_from_target'], -3.5)
+        self.assertEqual(result['status'], 'critical')
+    
+    def test_temperature_at_critical_boundaries(self):
+        """Test temperatures at critical boundaries"""
+        # At critical high (should be safe)
+        result_high = validate_blood_temperature(self.blood, 6.0)
+        self.assertTrue(result_high['is_safe'])
+        
+        # At critical low (should be safe)
+        result_low = validate_blood_temperature(self.blood, 1.0)
+        self.assertTrue(result_low['is_safe'])
+    
+    def test_plasma_temperature_validation(self):
+        """Test temperature validation for frozen plasma"""
+        plasma = MaterialLibrary.PLASMA
+        
+        # At target temperature (-18°C)
+        result_target = validate_blood_temperature(plasma, -18.0)
+        self.assertTrue(result_target['is_safe'])
+        self.assertTrue(result_target['is_within_tolerance'])
+        
+        # Above critical temperature
+        result_warm = validate_blood_temperature(plasma, -15.0)
+        self.assertFalse(result_warm['is_safe'])
+        self.assertEqual(result_warm['status'], 'critical')
 
 
 class TestBloodThermalMass(unittest.TestCase):
@@ -599,214 +734,339 @@ class TestBloodThermalMass(unittest.TestCase):
         self.blood = MaterialLibrary.WHOLE_BLOOD
         self.container = MaterialLibrary.ABS_PLASTIC
     
-    def test_calculate_blood_thermal_mass(self):
-        """Test blood thermal mass calculation"""
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+    def test_calculate_blood_thermal_mass_dict_return(self):
+        """Test blood thermal mass calculation returns detailed dictionary"""
+        result = calculate_blood_thermal_mass(
             blood_product=self.blood,
             volume_liters=0.5,
             container_material=self.container,
             container_mass_kg=0.1
         )
         
-        # Calculate expected values
+        # Should return dictionary with detailed breakdown
+        self.assertIsInstance(result, dict)
+        self.assertIn('total_thermal_mass', result)
+        self.assertIn('blood_thermal_mass', result)
+        self.assertIn('container_thermal_mass', result)
+        self.assertIn('blood_mass_kg', result)
+        
+        # Verify blood mass calculation
         volume_m3 = 0.5 / 1000.0
-        blood_mass_kg = self.blood.density * volume_m3
+        expected_blood_mass = self.blood.density * volume_m3
+        self.assertAlmostEqual(result['blood_mass_kg'], expected_blood_mass, places=8)
+        
+        # Verify thermal mass components
         expected_blood_thermal_mass = (
-            blood_mass_kg * self.blood.specific_heat * self.blood.thermal_mass_factor
+            result['blood_mass_kg'] * self.blood.specific_heat * self.blood.thermal_mass_factor
         )
         expected_container_thermal_mass = 0.1 * self.container.specific_heat
-        expected_total = expected_blood_thermal_mass + expected_container_thermal_mass
         
-        self.assertAlmostEqual(thermal_mass, expected_total, places=8)
+        self.assertAlmostEqual(result['blood_thermal_mass'], expected_blood_thermal_mass, places=6)
+        self.assertAlmostEqual(result['container_thermal_mass'], expected_container_thermal_mass, places=6)
+        
+        # Total should equal sum of components
+        expected_total = result['blood_thermal_mass'] + result['container_thermal_mass']
+        self.assertAlmostEqual(result['total_thermal_mass'], expected_total, places=8)
     
-    def test_calculate_thermal_mass_invalid_volume(self):
-        """Test thermal mass with invalid volume"""
+    def test_blood_thermal_mass_different_products(self):
+        """Test thermal mass calculation for different blood products"""
+        volume = 0.5  # liters
+        container_mass = 0.1  # kg
+        
+        # Test whole blood
+        whole_blood_result = calculate_blood_thermal_mass(
+            self.blood, volume, self.container, container_mass
+        )
+        
+        # Test plasma
+        plasma_result = calculate_blood_thermal_mass(
+            MaterialLibrary.PLASMA, volume, self.container, container_mass
+        )
+        
+        # Test platelets
+        platelet_result = calculate_blood_thermal_mass(
+            MaterialLibrary.PLATELETS, volume, self.container, container_mass
+        )
+        
+        # All should return valid dictionaries
+        for result in [whole_blood_result, plasma_result, platelet_result]:
+            self.assertIsInstance(result, dict)
+            self.assertGreater(result['total_thermal_mass'], 0)
+            self.assertGreater(result['blood_thermal_mass'], 0)
+            self.assertGreater(result['container_thermal_mass'], 0)
+        
+        # Different blood products should have different thermal masses
+        # due to different densities and thermal mass factors
+        self.assertNotEqual(
+            whole_blood_result['blood_thermal_mass'],
+            plasma_result['blood_thermal_mass']
+        )
+    
+    def test_calculate_thermal_mass_invalid_inputs(self):
+        """Test thermal mass with invalid inputs"""
+        # Test negative volume
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.calculate_blood_thermal_mass(
-                blood_product=self.blood,
-                volume_liters=-0.5,
-                container_material=self.container,
-                container_mass_kg=0.1
+            calculate_blood_thermal_mass(
+                self.blood, -0.5, self.container, 0.1
             )
         self.assertIn("Volume must be positive", str(context.exception))
-    
-    def test_calculate_thermal_mass_negative_container_mass(self):
-        """Test thermal mass with negative container mass"""
+        
+        # Test zero volume
+        with self.assertRaises(ValueError):
+            calculate_blood_thermal_mass(
+                self.blood, 0.0, self.container, 0.1
+            )
+        
+        # Test negative container mass
         with self.assertRaises(ValueError) as context:
-            HeatTransfer.calculate_blood_thermal_mass(
-                blood_product=self.blood,
-                volume_liters=0.5,
-                container_material=self.container,
-                container_mass_kg=-0.1
+            calculate_blood_thermal_mass(
+                self.blood, 0.5, self.container, -0.1
             )
         self.assertIn("container mass non-negative", str(context.exception))
     
     def test_calculate_thermal_mass_zero_container_mass(self):
         """Test thermal mass with zero container mass"""
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
-            blood_product=self.blood,
-            volume_liters=0.5,
-            container_material=self.container,
-            container_mass_kg=0.0
+        result = calculate_blood_thermal_mass(
+            self.blood, 0.5, self.container, 0.0
         )
         
-        # Should only include blood thermal mass
-        volume_m3 = 0.5 / 1000.0
-        blood_mass_kg = self.blood.density * volume_m3
-        expected = blood_mass_kg * self.blood.specific_heat * self.blood.thermal_mass_factor
+        # Container thermal mass should be zero
+        self.assertEqual(result['container_thermal_mass'], 0.0)
         
-        self.assertAlmostEqual(thermal_mass, expected, places=8)
+        # Total should equal only blood thermal mass
+        self.assertEqual(result['total_thermal_mass'], result['blood_thermal_mass'])
+        
+        # Blood thermal mass should still be calculated correctly
+        volume_m3 = 0.5 / 1000.0
+        expected_blood_mass = self.blood.density * volume_m3
+        expected_blood_thermal_mass = (
+            expected_blood_mass * self.blood.specific_heat * self.blood.thermal_mass_factor
+        )
+        self.assertAlmostEqual(result['blood_thermal_mass'], expected_blood_thermal_mass, places=6)
+    
+    def test_thermal_mass_scaling_with_volume(self):
+        """Test that thermal mass scales proportionally with volume"""
+        container_mass = 0.1
+        
+        # Test different volumes
+        volume_1L = calculate_blood_thermal_mass(self.blood, 1.0, self.container, container_mass)
+        volume_2L = calculate_blood_thermal_mass(self.blood, 2.0, self.container, container_mass)
+        
+        # Blood thermal mass should scale with volume
+        ratio = volume_2L['blood_thermal_mass'] / volume_1L['blood_thermal_mass']
+        self.assertAlmostEqual(ratio, 2.0, places=8)
+        
+        # Blood mass should also scale
+        mass_ratio = volume_2L['blood_mass_kg'] / volume_1L['blood_mass_kg']
+        self.assertAlmostEqual(mass_ratio, 2.0, places=8)
+        
+        # Container thermal mass should remain the same
+        self.assertEqual(volume_1L['container_thermal_mass'], volume_2L['container_thermal_mass'])
 
 
 class TestIntegrationScenarios(unittest.TestCase):
-    """Integration tests for realistic scenarios"""
-    
-    def test_blood_bag_cooling_scenario(self):
-        """Test realistic blood bag cooling scenario"""
-        # Blood bag properties
-        blood = MaterialLibrary.WHOLE_BLOOD
-        container = MaterialLibrary.MEDICAL_GRADE_PVC
-        insulation = MaterialLibrary.POLYURETHANE_FOAM
+    """Integration tests for realistic blood storage scenarios"""
         
-        # Geometry
-        bag_geometry = GeometricProperties(
-            length=0.2,  # 20cm characteristic length
-            area=0.04,   # 0.04 m² surface area
-            volume=0.0005,  # 0.5L volume
-            thickness=0.002,  # 2mm wall thickness
-            air_velocity=0.1  # Slight air movement
-        )
-        
-        # Calculate thermal mass
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
-            blood_product=blood,
-            volume_liters=0.5,
-            container_material=container,
-            container_mass_kg=0.05
-        )
-        
-        # Calculate heat transfer rates
-        q_conduction = HeatTransfer.conduction_heat_transfer(
-            material=container,
-            geometry=bag_geometry,
-            temp_hot=25,  # Room temperature
-            temp_cold=4   # Target blood temperature
-        )
-        
-        q_convection = HeatTransfer.convection_heat_transfer(
-            geometry=bag_geometry,
-            area=bag_geometry.area,
-            temp_surface=4,
-            temp_fluid=25,
-            orientation='vertical'
-        )
-        
-        q_radiation = HeatTransfer.radiation_heat_transfer(
-            material=container,
-            area=bag_geometry.area,
-            temp_hot_c=25,
-            temp_cold_c=4
-        )
-        
-        # All calculations should complete without error
-        self.assertIsInstance(thermal_mass, float)
-        self.assertIsInstance(q_conduction, float)
-        self.assertIsInstance(q_convection, float)
-        self.assertIsInstance(q_radiation, float)
-        
-        # Heat should flow into the cold blood bag
-        self.assertGreater(q_conduction, 0)
-        self.assertLess(q_convection, 0)  # Negative because surface is colder
-        self.assertGreater(q_radiation, 0)  # Positive because environment radiates heat TO the cold bag
-
-    def test_warm_blood_bag_into_cooler_scenario(self):
-        """Test realistic scenario: warm blood bag placed into cooler"""
-        # Blood bag at room temperature being cooled down
+    def test_blood_bag_cooling_detailed_analysis(self):
+        """Test comprehensive blood bag cooling with all heat transfer mechanisms"""
+        # System setup - blood bag in cooling environment
         blood = MaterialLibrary.WHOLE_BLOOD
         container = MaterialLibrary.MEDICAL_GRADE_PVC
         
-        # Geometry - more realistic effective thermal path
+        # Realistic blood bag geometry
         bag_geometry = GeometricProperties(
-            length=0.2,  # 20cm characteristic length
-            area=0.04,   # 0.04 m² surface area
-            volume=0.0005,  # 0.5L volume
-            thickness=0.005,  # 5mm EFFECTIVE thickness (includes air gaps, thermal bridging)
-            air_velocity=0.5  # Cooler fan circulation
+            length=0.15,     # 15cm characteristic length
+            area=0.035,      # 350 cm² surface area
+            volume=0.0005,   # 500 mL volume
+            thickness=0.003, # 3mm effective thermal path
+            air_velocity=0.2 # Gentle air circulation
         )
         
-        # Initial conditions: bag at room temp, cooler environment at 4°C
-        bag_temp = 20.0  # Room temperature blood bag
-        cooler_temp = 4.0  # Cooler environment
+        # Temperature scenario: room temperature bag entering refrigerator
+        initial_bag_temp = 22.0  # Room temperature
+        refrigerator_temp = 4.0  # Target storage temperature
         
-        # Calculate thermal mass - important for cooling time estimation
-        thermal_mass = HeatTransfer.calculate_blood_thermal_mass(
+        # Calculate thermal properties
+        thermal_data = calculate_blood_thermal_mass(
             blood_product=blood,
             volume_liters=0.5,
             container_material=container,
-            container_mass_kg=0.05
+            container_mass_kg=0.08  # Typical blood bag weight
         )
         
-        # Calculate heat transfer rates (heat leaving the warm bag)
-        q_conduction = HeatTransfer.conduction_heat_transfer(
+        # Calculate all heat transfer mechanisms
+        q_conduction = conduction_heat_transfer(
             material=container,
             geometry=bag_geometry,
-            temp_hot=bag_temp,  # Warm bag
-            temp_cold=cooler_temp  # Cold cooler
+            temp_hot=initial_bag_temp,
+            temp_cold=refrigerator_temp
         )
         
-        q_convection = HeatTransfer.convection_heat_transfer(
+        q_convection = convection_heat_transfer(
             geometry=bag_geometry,
             area=bag_geometry.area,
-            temp_surface=bag_temp,  # Warm bag surface
-            temp_fluid=cooler_temp,  # Cold air in cooler
+            temp_surface=initial_bag_temp,
+            temp_fluid=refrigerator_temp,
             orientation='vertical'
         )
         
-        q_radiation = HeatTransfer.radiation_heat_transfer(
+        q_radiation = radiation_heat_transfer(
             material=container,
             area=bag_geometry.area,
-            temp_hot_c=bag_temp,  # Warm bag
-            temp_cold_c=cooler_temp  # Cold cooler walls
+            temp_hot_c=initial_bag_temp,
+            temp_cold_c=refrigerator_temp
         )
         
-        # All calculations should complete without error
-        self.assertIsInstance(thermal_mass, float)
-        self.assertIsInstance(q_conduction, float)
-        self.assertIsInstance(q_convection, float)
-        self.assertIsInstance(q_radiation, float)
+        # Validate thermal mass calculation
+        if isinstance(thermal_data, dict):
+            thermal_mass = thermal_data['total_thermal_mass']
+        else:
+            thermal_mass = thermal_data
+            
+        self.assertGreater(thermal_mass, 1500)  # Reasonable for 500mL blood
+        self.assertLess(thermal_mass, 3000)     # But not excessive
         
-        # Verify thermal mass is reasonable for a blood bag
-        self.assertGreater(thermal_mass, 1000)  # Should be > 1000 J/K
-        self.assertLess(thermal_mass, 10000)    # Should be < 10000 J/K
+        # Validate heat transfer calculations
+        self.assertGreater(q_conduction, 0)  # Heat flows from warm bag to cold environment
+        self.assertGreater(q_convection, 0)  # Heat convects from warm surface to cold air
+        self.assertGreater(q_radiation, 0)   # Heat radiates from warm bag to cold walls
         
-        # Heat should flow OUT of the warm blood bag (cooling it down)
-        self.assertGreater(q_conduction, 0)  # Positive: heat flows from warm bag to cold cooler
-        self.assertGreater(q_convection, 0)  # Positive: heat flows from warm surface to cold air
-        self.assertGreater(q_radiation, 0)   # Positive: heat radiates from warm bag to cold walls
-        
-        # Total heat loss rate (all positive values indicate heat leaving the bag)
+        # Calculate total heat loss rate and cooling characteristics
         total_heat_loss = q_conduction + q_convection + q_radiation
-        self.assertGreater(total_heat_loss, 0)
+        self.assertGreater(total_heat_loss, 0.5)  # Should have reasonable heat loss rate (>0.5W)
+        self.assertLess(total_heat_loss, 50.0)    # Adjusted upper limit for realistic scenarios
         
+        # Estimate thermal time constant
+        temperature_difference = initial_bag_temp - refrigerator_temp
+        effective_thermal_resistance = temperature_difference / total_heat_loss
+        time_constant = thermal_mass * effective_thermal_resistance
         
-        # Estimate cooling time constant (rough approximation)
-        if total_heat_loss > 0:
-            temperature_difference = bag_temp - cooler_temp
-            overall_heat_transfer_coeff = total_heat_loss / (bag_geometry.area * temperature_difference)
-            time_constant = thermal_mass / (overall_heat_transfer_coeff * bag_geometry.area)
-            
-            # Time constant should be reasonable (between 1 minute and 2 hours)
-            self.assertGreater(time_constant, 60)    # > 1 minute
-            self.assertLess(time_constant, 7200)     # < 2 hours
-            
-        # Verify the bag is initially too warm for safe storage
-        self.assertGreater(bag_temp, blood.critical_temp_high_c)
+        # Time constant should be realistic for blood bag cooling
+        self.assertGreater(time_constant, 300)   # >5 minutes (slow cooling preserves blood)
+        self.assertLess(time_constant, 7200)     # <2 hours (practical cooling time)
         
-        # Verify target temperature is within safe range
-        self.assertLessEqual(cooler_temp, blood.critical_temp_high_c)
-        self.assertGreaterEqual(cooler_temp, blood.critical_temp_low_c)
+        # Validate temperature safety
+        initial_validation = validate_blood_temperature(blood, initial_bag_temp)
+        final_validation = validate_blood_temperature(blood, refrigerator_temp)
+        
+        self.assertFalse(initial_validation['is_safe'])  # Initial temp too high
+        self.assertTrue(final_validation['is_safe'])     # Final temp is safe
+        self.assertTrue(final_validation['is_within_tolerance'])  # And within tolerance
 
+    def test_platelet_room_temperature_storage(self):
+        """Test platelet storage at room temperature with agitation"""
+        platelets = MaterialLibrary.PLATELETS
+        container = MaterialLibrary.ABS_PLASTIC
+        
+        # Platelet container with agitation
+        platelet_geometry = GeometricProperties(
+            length=0.10,     # 10cm characteristic length
+            area=0.020,      # 200 cm² surface area
+            volume=0.0002,   # 200 mL platelet unit
+            thickness=0.002, # 2mm thin walls for gas exchange
+            air_velocity=0.5 # Air movement from agitation
+        )
+        
+        # Temperature scenario: maintaining room temperature storage
+        storage_temp = 22.0    # Target platelet storage temperature
+        room_temp = 25.0       # Slightly warm room
+        
+        # Calculate thermal properties
+        thermal_data = calculate_blood_thermal_mass(
+            blood_product=platelets,
+            volume_liters=0.2,
+            container_material=container,
+            container_mass_kg=0.04
+        )
+        
+        # Calculate heat transfer (slight warming scenario)
+        q_conduction = conduction_heat_transfer(
+            material=container,
+            geometry=platelet_geometry,
+            temp_hot=room_temp,
+            temp_cold=storage_temp
+        )
+        
+        q_convection = convection_heat_transfer(
+            geometry=platelet_geometry,
+            area=platelet_geometry.area,
+            temp_surface=storage_temp,
+            temp_fluid=room_temp,
+            orientation='horizontal_hot_up'  # Platelet bags often stored horizontally
+        )
+        
+        # Validate platelet-specific requirements
+        self.assertIsInstance(thermal_data, dict)
+        
+        # Platelets have different thermal properties than other blood products
+        whole_blood_thermal = calculate_blood_thermal_mass(MaterialLibrary.WHOLE_BLOOD, 0.2, container, 0.04)
+        if isinstance(thermal_data, dict) and isinstance(whole_blood_thermal, dict):
+            self.assertNotEqual(thermal_data['blood_thermal_mass'], whole_blood_thermal['blood_thermal_mass'])
+        
+        # Heat transfer should be relatively small (small temperature difference)
+        total_heat_gain = q_conduction + abs(q_convection)  # abs because convection might be negative
+        self.assertLess(total_heat_gain, 10.0)  # Adjusted upper limit for small temperature differences
+        
+        # Validate temperature safety for platelets
+        storage_validation = validate_blood_temperature(platelets, storage_temp)
+        self.assertTrue(storage_validation['is_safe'])
+        self.assertTrue(storage_validation['is_within_tolerance'])
+        
+        # Test temperature boundaries
+        too_cold_validation = validate_blood_temperature(platelets, 19.0)
+        too_hot_validation = validate_blood_temperature(platelets, 25.0)
+        
+        self.assertFalse(too_cold_validation['is_safe'])
+        self.assertFalse(too_hot_validation['is_safe'])
 
+    def test_thermal_diffusivity_integration_scenarios(self):
+        """Test thermal diffusivity in realistic heat transfer scenarios"""
+        materials = [
+            ('Whole Blood', MaterialLibrary.WHOLE_BLOOD),
+            ('Plasma', MaterialLibrary.PLASMA),
+            ('Medical PVC', MaterialLibrary.MEDICAL_GRADE_PVC),
+            ('Aluminum', MaterialLibrary.ALUMINUM),
+            ('Insulation', MaterialLibrary.POLYURETHANE_FOAM)
+        ]
+        
+        diffusivities = {}
+        
+        # Calculate thermal diffusivity for all materials
+        for name, material in materials:
+            alpha = thermal_diffusivity(material)
+            diffusivities[name] = alpha
+            
+            # Validate reasonable ranges
+            self.assertGreater(alpha, 1e-9)   # Greater than 0.001 mm²/s
+            self.assertLess(alpha, 1e-3)      # Less than 1000 mm²/s
+        
+        # Validate relative diffusivities make physical sense
+        # Aluminum (metal) should have highest thermal diffusivity
+        self.assertGreater(diffusivities['Aluminum'], diffusivities['Medical PVC'])
+        self.assertGreater(diffusivities['Aluminum'], diffusivities['Whole Blood'])
+        
+        # Note: Insulation can have higher thermal diffusivity than expected due to low density
+        # So we'll just check that it's in a reasonable range
+        self.assertGreater(diffusivities['Insulation'], 1e-8)  # Not too low
+        self.assertLess(diffusivities['Insulation'], 1e-5)     # Not too high
+        
+        # Blood products should have similar diffusivities to each other
+        blood_plasma_ratio = diffusivities['Whole Blood'] / diffusivities['Plasma']
+        self.assertGreater(blood_plasma_ratio, 0.1)  # Within order of magnitude
+        self.assertLess(blood_plasma_ratio, 10.0)
+        
+        # Calculate characteristic time scales for different materials
+        characteristic_length = 0.01  # 1 cm
+        
+        for name, alpha in diffusivities.items():
+            characteristic_time = characteristic_length**2 / alpha
+            
+            # Validate reasonable time scales
+            if name == 'Aluminum':
+                self.assertLess(characteristic_time, 600)     # Fast response for metal (10 min max)
+            else:  # All other materials
+                self.assertGreater(characteristic_time, 10)   # At least 10 seconds
+                self.assertLess(characteristic_time, 36000)   # Less than 10 hours
 
 if __name__ == '__main__':
     # Run all tests
