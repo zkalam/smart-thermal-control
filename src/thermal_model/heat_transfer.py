@@ -211,11 +211,21 @@ def calculate_thermal_capacitance(material: MaterialProperties, mass: float) -> 
     return mass * material.specific_heat
 
 
+
+"""
+Calculate thermal diffusivity: α = k/(ρcp)
+Used in transient heat transfer analysis
+"""
+def thermal_diffusivity(material: MaterialProperties) -> float:
+
+    return material.thermal_conductivity / (material.density * material.specific_heat)
+
+
 """
 Calculate effective thermal mass including blood and container
 
 """
-def calculate_blood_thermal_mass(blood_product: BloodProperties, volume_liters: float, container_material: MaterialProperties, container_mass_kg: float) -> float:
+def calculate_blood_thermal_mass(blood_product: BloodProperties, volume_liters: float, container_material: MaterialProperties, container_mass_kg: float) -> dict:
 
     if volume_liters <= 0 or container_mass_kg < 0:
         raise ValueError("Volume must be positive, container mass non-negative")
@@ -230,6 +240,29 @@ def calculate_blood_thermal_mass(blood_product: BloodProperties, volume_liters: 
     # Container thermal mass
     container_thermal_mass = calculate_thermal_capacitance(container_material, container_mass_kg)
     
-    return blood_thermal_mass + container_thermal_mass
+    return {
+        'total_thermal_mass': blood_thermal_mass + container_thermal_mass,
+        'blood_thermal_mass': blood_thermal_mass,
+        'container_thermal_mass': container_thermal_mass,
+        'blood_mass_kg': blood_mass_kg
+    }
 
+"""
+Check if temperature is within safe ranges for blood product
+
+Returns:
+    dict with 'is_safe', 'is_critical', 'deviation_from_target'
+"""
+def validate_blood_temperature(blood_product: BloodProperties, current_temp: float) -> dict:
+
+    deviation = abs(current_temp - blood_product.target_temp_c)
+    is_within_tolerance = deviation <= blood_product.temp_tolerance_c
+    is_safe = (blood_product.critical_temp_low_c <= current_temp <= blood_product.critical_temp_high_c)
+    
+    return {
+        'is_safe': is_safe,
+        'is_within_tolerance': is_within_tolerance,
+        'deviation_from_target': current_temp - blood_product.target_temp_c,
+        'status': 'safe' if is_safe else 'critical'
+    }
 
