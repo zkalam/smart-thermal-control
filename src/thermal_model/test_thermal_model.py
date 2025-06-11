@@ -436,7 +436,7 @@ class TestHeatTransferConvection(unittest.TestCase):
         self.geometry = GeometricProperties(
             length=1.0,
             area=1.0,
-            volume=1.0,n
+            volume=1.0,
         )
     
     def test_convection_coefficient_natural_vertical(self):
