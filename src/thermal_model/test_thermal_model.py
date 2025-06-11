@@ -861,12 +861,12 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=0.035,      # 350 cm² surface area
             volume=0.0005,   # 500 mL volume
             thickness=0.003, # 3mm effective thermal path
-            air_velocity=0.2 # Gentle air circulation
         )
         
         # Temperature scenario: room temperature bag entering refrigerator
         initial_bag_temp = 22.0  # Room temperature
         refrigerator_temp = 4.0  # Target storage temperature
+        air_velocity= 0.2 # Gentle air circulation
         
         # Calculate thermal properties
         thermal_data = calculate_blood_thermal_mass(
@@ -889,6 +889,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=bag_geometry.area,
             temp_surface=initial_bag_temp,
             temp_fluid=refrigerator_temp,
+            velocity = air_velocity,
             orientation='vertical'
         )
         
@@ -946,12 +947,12 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=0.020,      # 200 cm² surface area
             volume=0.0002,   # 200 mL platelet unit
             thickness=0.002, # 2mm thin walls for gas exchange
-            air_velocity=0.5 # Air movement from agitation
         )
         
         # Temperature scenario: maintaining room temperature storage
         storage_temp = 22.0    # Target platelet storage temperature
         room_temp = 25.0       # Slightly warm room
+        air_velocity= 0.5 # Air movement from agitation
         
         # Calculate thermal properties
         thermal_data = calculate_blood_thermal_mass(
@@ -974,6 +975,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=platelet_geometry.area,
             temp_surface=storage_temp,
             temp_fluid=room_temp,
+            velocity=air_velocity,
             orientation='horizontal_hot_up'  # Platelet bags often stored horizontally
         )
         
