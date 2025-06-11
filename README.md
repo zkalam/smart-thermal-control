@@ -44,7 +44,7 @@ This project was developed using modern AI-assisted engineering workflows as a l
 - **System Design**: Modular architecture for complex engineering systems
 - **Domain Research**: Understanding medical device requirements and thermal physics
 - **Code Review**: Validating and improving AI-generated implementations
-- **Quality Assurance**: Testing safety-critical applications
+- **Quality Assurance**: Testing applications
 
 ## Project Structure
 
@@ -103,13 +103,12 @@ User interface and system monitoring:
 ### Phase 1: Thermal Physics Model (Completed 06/09/2025)
 - Built comprehensive heat transfer calculations
 - Created material properties library
-- Implemented 67 unit tests with full validation
+- Implemented unit tests with full validation
 
 
 ### Phase 2: Dynamic Simulation (In Progress)
 - Building time-stepping simulation engine
 - Creating realistic thermal system models
-- [Current status](docs/development_journal.md#phase-2)
 
 ### 📋 Phase 3: Control System Design (Not Started Yet)
 - Implementing PID controller for precise temperature regulation

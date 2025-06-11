@@ -496,6 +496,7 @@ class TestHeatTransferConvection(unittest.TestCase):
             area=2.0,
             temp_surface=50,
             temp_fluid=20,
+            velocity=0.0,
             orientation='vertical'
         )
         self.assertGreater(q, 0)  # Should be positive for hot surface
@@ -508,6 +509,7 @@ class TestHeatTransferConvection(unittest.TestCase):
             area=2.0,
             temp_surface=10,
             temp_fluid=20,
+            velocity=0.0,
             orientation='vertical'
         )
         self.assertLess(q, 0)  # Should be negative for cold surface
