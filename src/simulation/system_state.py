@@ -15,7 +15,7 @@ from ..thermal_model.heat_transfer import *
 """Represents thermal system at one moment in time"""
 class SystemState:
 
-    def __init__(self, time: float, blood_temp: float, ambient_temp: float,
+    def __init__(self, time: float, blood_temp: float, ambient_temp: float, air_velocity: float,
                  blood_product: BloodProperties, container_material: MaterialProperties,
                  volume_liters: float, container_mass_kg: float,
                  applied_power: float = 0.0):
@@ -24,6 +24,7 @@ class SystemState:
         self.time = time
         self.blood_temperature = blood_temp
         self.ambient_temperature = ambient_temp
+        self.air_velocity = air_velocity
         self.applied_power = applied_power  # External heating/cooling (W)
         
         # System configuration (needed for physics calculations)
