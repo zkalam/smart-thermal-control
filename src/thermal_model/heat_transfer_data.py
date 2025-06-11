@@ -32,7 +32,7 @@ CONSTANTS = PhysicalConstantsType(
     room_temperature_c=20.0
 )
 
-@dataclass(frozen=True)
+@dataclass
 class MaterialProperties:
     # Physical properties of materials for heat transfer calculations
     thermal_conductivity: float  # W/mK - ability to conduct heat
@@ -52,7 +52,7 @@ class MaterialProperties:
             raise ValueError("Emissivity must be between 0 and 1")
 
 
-@dataclass(frozen=True)
+@dataclass
 class GeometricProperties:
     # Geometric properties for heat transfer calculations
     length: float              # m - characteristic length
@@ -68,7 +68,7 @@ class GeometricProperties:
             raise ValueError("Thickness must be positive if specified")
 
 
-@dataclass(frozen=True)
+@dataclass
 class BloodProperties:
     # Thermal properties specific to blood products
     blood_type: str
