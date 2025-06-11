@@ -159,13 +159,11 @@ class TestGeometricProperties(unittest.TestCase):
             area=2.0,
             volume=3.0,
             thickness=0.1,
-            air_velocity=0.5
         )
         self.assertEqual(geom.length, 1.0)
         self.assertEqual(geom.area, 2.0)
         self.assertEqual(geom.volume, 3.0)
         self.assertEqual(geom.thickness, 0.1)
-        self.assertEqual(geom.air_velocity, 0.5)
     
     def test_optional_parameters(self):
         """Test that optional parameters default to None"""
@@ -175,7 +173,6 @@ class TestGeometricProperties(unittest.TestCase):
             volume=3.0
         )
         self.assertIsNone(geom.thickness)
-        self.assertIsNone(geom.air_velocity)
     
     def test_negative_dimensions(self):
         """Test that negative dimensions raise ValueError"""
@@ -204,21 +201,7 @@ class TestGeometricProperties(unittest.TestCase):
                 length=1.0, area=2.0, volume=3.0, thickness=-0.1
             )
         self.assertIn("Thickness must be positive if specified", str(context.exception))
-    
-    def test_negative_air_velocity(self):
-        """Test that negative air velocity raises ValueError"""
-        with self.assertRaises(ValueError) as context:
-            GeometricProperties(
-                length=1.0, area=2.0, volume=3.0, air_velocity=-0.5
-            )
-        self.assertIn("Air velocity must be greater than or equal to zero", str(context.exception))
-    
-    def test_zero_air_velocity(self):
-        """Test that zero air velocity is allowed"""
-        geom = GeometricProperties(
-            length=1.0, area=2.0, volume=3.0, air_velocity=0.0
-        )
-        self.assertEqual(geom.air_velocity, 0.0)
+   
 
 
 class TestBloodProperties(unittest.TestCase):
@@ -453,8 +436,7 @@ class TestHeatTransferConvection(unittest.TestCase):
         self.geometry = GeometricProperties(
             length=1.0,
             area=1.0,
-            volume=1.0,
-            air_velocity=0.0  # Natural convection
+            volume=1.0,n
         )
     
     def test_convection_coefficient_natural_vertical(self):
