@@ -49,58 +49,58 @@ This project was developed using modern AI-assisted engineering workflows as a l
 ## Project Structure
 
 ```mermaid
-graph TD
-    A[Smart Thermal Control System] --> B[src/]
-    A --> C[docs/]
-    A --> D[Configuration Files]
+graph TD;
+    A[Smart Thermal Control System] --> B[src/];
+    A --> C[docs/];
+    A --> D[Configuration Files];
     
-    B --> E[thermal_model/]
-    B --> F[simulation/]
-    B --> G[control/]
-    B --> H[dashboard/]
+    B --> E[thermal_model/];
+    B --> F[simulation/];
+    B --> G[control/];
+    B --> H[dashboard/];
     
-    E --> E1[heat_transfer.py<br/>Heat transfer physics]
-    E --> E2[heat_transfer_data.py<br/>Material properties]
-    E --> E3[test_heat_transfer.py<br/>Unit tests]
+    E --> E1[heat_transfer.py<br/>Heat transfer physics];
+    E --> E2[heat_transfer_data.py<br/>Material properties];
+    E --> E3[test_heat_transfer.py<br/>Unit tests];
     
-    F --> F1[system_state.py<br/>State management]
-    F --> F2[time_step.py<br/>RK4 integration]
-    F --> F3[thermal_system.py<br/>System interface]
-    F --> F4[test_simulation.py<br/>Simulation tests]
+    F --> F1[system_state.py<br/>State management];
+    F --> F2[time_step.py<br/>RK4 integration];
+    F --> F3[thermal_system.py<br/>System interface];
+    F --> F4[test_simulation.py<br/>Simulation tests];
     
-    G --> G1[PID Controller<br/>Temperature regulation]
-    G --> G2[Safety Monitor<br/>Limit checking]
-    G --> G3[Control Interface<br/>System integration]
+    G --> G1[PID Controller<br/>Temperature regulation];
+    G --> G2[Safety Monitor<br/>Limit checking];
+    G --> G3[Control Interface<br/>System integration];
     
-    H --> H1[Real-time Plots<br/>Temperature visualization]
-    H --> H2[System Monitor<br/>Status displays]
-    H --> H3[Control Panel<br/>User interface]
+    H --> H1[Real-time Plots<br/>Temperature visualization];
+    H --> H2[System Monitor<br/>Status displays];
+    H --> H3[Control Panel<br/>User interface];
     
-    C --> C1[blood_storage_requirements.md]
-    C --> C2[thermal_model.md]
-    C --> C3[system_architecture.md]
+    C --> C1[blood_storage_requirements.md];
+    C --> C2[thermal_model.md];
+    C --> C3[system_architecture.md];
     
-    D --> D1[requirements.txt]
-    D --> D2[pytest.ini]
-    D --> D3[.gitignore]
-    D --> D4[README.md]
+    D --> D1[requirements.txt];
+    D --> D2[pytest.ini];
+    D --> D3[.gitignore];
+    D --> D4[README.md];
     
     %% Data flow arrows
-    E -.->|Physics Calculations| F
-    F -.->|System State| G
-    G -.->|Control Commands| F
-    F -.->|Real-time Data| H
-    H -.->|User Commands| G
+    E -.->|Physics Calculations| F;
+    F -.->|System State| G;
+    G -.->|Control Commands| F;
+    F -.->|Real-time Data| H;
+    H -.->|User Commands| G;
     
     %% Styling
-    classDef implemented fill:#90EE90,stroke:#006400,stroke-width:2px
-    classDef planned fill:#FFE4B5,stroke:#FF8C00,stroke-width:2px
-    classDef config fill:#E6E6FA,stroke:#4B0082,stroke-width:2px
+    classDef implemented fill:#90EE90,stroke:#006400,stroke-width:2px;
+    classDef planned fill:#FFE4B5,stroke:#FF8C00,stroke-width:2px;
+    classDef config fill:#E6E6FA,stroke:#4B0082,stroke-width:2px;
     
-    class E,E1,E2,E3,F,F1,F2,F3,F4 implemented
-    class G,G1,G2,G3,H,H1,H2,H3 planned
-    class C,C1,C2,C3,D,D1,D2,D3,D4 config
-
+    class E,E1,E2,E3,F,F1,F2,F3,F4 implemented;
+    class G,G1,G2,G3,H,H1,H2,H3 planned;
+    class C,C1,C2,C3,D,D1,D2,D3,D4 config;
+```
 ## Module Descriptions
 
 ### `src/thermal_model/`
