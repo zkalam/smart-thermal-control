@@ -2,8 +2,8 @@
 Unit tests for heat transfer model
 """
 
-from heat_transfer import *
-from heat_transfer_data import *
+from .heat_transfer import *
+from .heat_transfer_data import *
 import unittest
 from unittest.mock import patch
 import warnings
@@ -159,13 +159,11 @@ class TestGeometricProperties(unittest.TestCase):
             area=2.0,
             volume=3.0,
             thickness=0.1,
-            air_velocity=0.5
         )
         self.assertEqual(geom.length, 1.0)
         self.assertEqual(geom.area, 2.0)
         self.assertEqual(geom.volume, 3.0)
         self.assertEqual(geom.thickness, 0.1)
-        self.assertEqual(geom.air_velocity, 0.5)
     
     def test_optional_parameters(self):
         """Test that optional parameters default to None"""
@@ -175,7 +173,6 @@ class TestGeometricProperties(unittest.TestCase):
             volume=3.0
         )
         self.assertIsNone(geom.thickness)
-        self.assertIsNone(geom.air_velocity)
     
     def test_negative_dimensions(self):
         """Test that negative dimensions raise ValueError"""
@@ -204,21 +201,7 @@ class TestGeometricProperties(unittest.TestCase):
                 length=1.0, area=2.0, volume=3.0, thickness=-0.1
             )
         self.assertIn("Thickness must be positive if specified", str(context.exception))
-    
-    def test_negative_air_velocity(self):
-        """Test that negative air velocity raises ValueError"""
-        with self.assertRaises(ValueError) as context:
-            GeometricProperties(
-                length=1.0, area=2.0, volume=3.0, air_velocity=-0.5
-            )
-        self.assertIn("Air velocity must be greater than or equal to zero", str(context.exception))
-    
-    def test_zero_air_velocity(self):
-        """Test that zero air velocity is allowed"""
-        geom = GeometricProperties(
-            length=1.0, area=2.0, volume=3.0, air_velocity=0.0
-        )
-        self.assertEqual(geom.air_velocity, 0.0)
+   
 
 
 class TestBloodProperties(unittest.TestCase):
@@ -454,7 +437,6 @@ class TestHeatTransferConvection(unittest.TestCase):
             length=1.0,
             area=1.0,
             volume=1.0,
-            air_velocity=0.0  # Natural convection
         )
     
     def test_convection_coefficient_natural_vertical(self):
@@ -514,6 +496,7 @@ class TestHeatTransferConvection(unittest.TestCase):
             area=2.0,
             temp_surface=50,
             temp_fluid=20,
+            velocity=0.0,
             orientation='vertical'
         )
         self.assertGreater(q, 0)  # Should be positive for hot surface
@@ -526,6 +509,7 @@ class TestHeatTransferConvection(unittest.TestCase):
             area=2.0,
             temp_surface=10,
             temp_fluid=20,
+            velocity=0.0,
             orientation='vertical'
         )
         self.assertLess(q, 0)  # Should be negative for cold surface
@@ -879,12 +863,12 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=0.035,      # 350 cm² surface area
             volume=0.0005,   # 500 mL volume
             thickness=0.003, # 3mm effective thermal path
-            air_velocity=0.2 # Gentle air circulation
         )
         
         # Temperature scenario: room temperature bag entering refrigerator
         initial_bag_temp = 22.0  # Room temperature
         refrigerator_temp = 4.0  # Target storage temperature
+        air_velocity= 0.2 # Gentle air circulation
         
         # Calculate thermal properties
         thermal_data = calculate_blood_thermal_mass(
@@ -907,6 +891,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=bag_geometry.area,
             temp_surface=initial_bag_temp,
             temp_fluid=refrigerator_temp,
+            velocity = air_velocity,
             orientation='vertical'
         )
         
@@ -964,12 +949,12 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=0.020,      # 200 cm² surface area
             volume=0.0002,   # 200 mL platelet unit
             thickness=0.002, # 2mm thin walls for gas exchange
-            air_velocity=0.5 # Air movement from agitation
         )
         
         # Temperature scenario: maintaining room temperature storage
         storage_temp = 22.0    # Target platelet storage temperature
         room_temp = 25.0       # Slightly warm room
+        air_velocity= 0.5 # Air movement from agitation
         
         # Calculate thermal properties
         thermal_data = calculate_blood_thermal_mass(
@@ -992,6 +977,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             area=platelet_geometry.area,
             temp_surface=storage_temp,
             temp_fluid=room_temp,
+            velocity=air_velocity,
             orientation='horizontal_hot_up'  # Platelet bags often stored horizontally
         )
         

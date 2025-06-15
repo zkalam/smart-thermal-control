@@ -59,7 +59,6 @@ class GeometricProperties:
     area: float                # m² - heat transfer area
     volume: float              # m³ - volume for thermal mass
     thickness: Optional[float] = None  # m - wall thickness for conduction
-    air_velocity: Optional[float] = None # m/s air velocity for convection
 
     def __post_init__(self):
         # Validate geometric properties
@@ -67,8 +66,6 @@ class GeometricProperties:
             raise ValueError("All geometric dimensions must be positive")
         if self.thickness is not None and self.thickness <= 0:
             raise ValueError("Thickness must be positive if specified")
-        if self.air_velocity is not None and self.air_velocity < 0:
-            raise ValueError("Air velocity must be greater than or equal to zero")
 
 
 @dataclass

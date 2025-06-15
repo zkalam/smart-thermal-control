@@ -6,7 +6,7 @@ This module implements heat transfer mechanisms in the context of blood storage:
 - Radiation (Stefan-Boltzmann Law)
 
 """
-from heat_transfer_data import *
+from .heat_transfer_data import *
 import warnings
 
 
@@ -165,14 +165,15 @@ Args:
     area: Heat transfer area (m²)
     temp_surface: Surface temperature (°C)
     temp_fluid: Fluid temperature (°C)
+    velocity: Air velocity (m/s)
     orientation: 'vertical', 'horizontal_hot_up', or 'horizontal_hot_down'
     
 Returns:
     Heat transfer rate (W)
 """
-def convection_heat_transfer(geometry: GeometricProperties, area: float, temp_surface: float, temp_fluid: float, orientation: str) -> float:
+def convection_heat_transfer(geometry: GeometricProperties, area: float, temp_surface: float, temp_fluid: float, velocity: float, orientation: str) -> float:
 
-    h_conv = get_convection_coefficient(geometry.length, temp_surface, temp_fluid, geometry.air_velocity, orientation)
+    h_conv = get_convection_coefficient(geometry.length, temp_surface, temp_fluid, velocity, orientation)
     delta_t = temp_surface - temp_fluid
     q_conv =  h_conv * area * delta_t
     
