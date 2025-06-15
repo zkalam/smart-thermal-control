@@ -7,7 +7,7 @@ This module handles time-stepping integration to evolve system temperature over 
 from typing import Optional, Callable
 import warnings
 
-from system_state import *
+from .system_state import *
 from ..thermal_model.heat_transfer import *
 from ..thermal_model.heat_transfer_data import *
 
