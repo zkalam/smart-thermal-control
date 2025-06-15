@@ -2,8 +2,8 @@
 Unit tests for heat transfer model
 """
 
-from heat_transfer import *
-from heat_transfer_data import *
+from .heat_transfer import *
+from .heat_transfer_data import *
 import unittest
 from unittest.mock import patch
 import warnings

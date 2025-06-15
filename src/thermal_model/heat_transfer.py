@@ -6,7 +6,7 @@ This module implements heat transfer mechanisms in the context of blood storage:
 - Radiation (Stefan-Boltzmann Law)
 
 """
-from heat_transfer_data import *
+from .heat_transfer_data import *
 import warnings
 
 
