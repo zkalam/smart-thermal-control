@@ -48,29 +48,58 @@ This project was developed using modern AI-assisted engineering workflows as a l
 
 ## Project Structure
 
-smart-thermal-control/
-├── src/
-│   ├── thermal_model/          # Heat transfer physics and calculations
-│   │   ├── __init__.py
-│   │   ├──[physics model files]
-│   ├── control/                # Temperature control algorithms
-│   │   ├── __init__.py
-│   │   └── [control files]
-│   ├── simulation/             # Dynamic system simulation
-│   │   ├── __init__.py
-│   │   └── [simulation files]
-│   └── dashboard/              # User interface and monitoring
-│       ├── __init__.py
-│       └── [dashboard files]
-├── docs/
-│   ├── blood_storage_requirements.md     # Medical standards
-│   ├── thermal_model.md                  # Physics model documentation
-│   ├── system_architecture.md            # system diagram
-├── __init__.py            
-├── requirements.txt            # Python dependencies
-├── pytest.ini                  # configuration file for pytest
-├── .gitignore                 # Git ignore rules
-└── README.md                  # This file
+```mermaid
+graph TD
+    A[Smart Thermal Control System] --> B[src/]
+    A --> C[docs/]
+    A --> D[Configuration Files]
+    
+    B --> E[thermal_model/]
+    B --> F[simulation/]
+    B --> G[control/]
+    B --> H[dashboard/]
+    
+    E --> E1[heat_transfer.py<br/>Heat transfer physics]
+    E --> E2[heat_transfer_data.py<br/>Material properties]
+    E --> E3[test_heat_transfer.py<br/>Unit tests]
+    
+    F --> F1[system_state.py<br/>State management]
+    F --> F2[time_step.py<br/>RK4 integration]
+    F --> F3[thermal_system.py<br/>System interface]
+    F --> F4[test_simulation.py<br/>Simulation tests]
+    
+    G --> G1[PID Controller<br/>Temperature regulation]
+    G --> G2[Safety Monitor<br/>Limit checking]
+    G --> G3[Control Interface<br/>System integration]
+    
+    H --> H1[Real-time Plots<br/>Temperature visualization]
+    H --> H2[System Monitor<br/>Status displays]
+    H --> H3[Control Panel<br/>User interface]
+    
+    C --> C1[blood_storage_requirements.md]
+    C --> C2[thermal_model.md]
+    C --> C3[system_architecture.md]
+    
+    D --> D1[requirements.txt]
+    D --> D2[pytest.ini]
+    D --> D3[.gitignore]
+    D --> D4[README.md]
+    
+    %% Data flow arrows
+    E -.->|Physics Calculations| F
+    F -.->|System State| G
+    G -.->|Control Commands| F
+    F -.->|Real-time Data| H
+    H -.->|User Commands| G
+    
+    %% Styling
+    classDef implemented fill:#90EE90,stroke:#006400,stroke-width:2px
+    classDef planned fill:#FFE4B5,stroke:#FF8C00,stroke-width:2px
+    classDef config fill:#E6E6FA,stroke:#4B0082,stroke-width:2px
+    
+    class E,E1,E2,E3,F,F1,F2,F3,F4 implemented
+    class G,G1,G2,G3,H,H1,H2,H3 planned
+    class C,C1,C2,C3,D,D1,D2,D3,D4 config
 
 ## Module Descriptions
 
@@ -80,17 +109,18 @@ Contains the core heat transfer physics calculations:
 - **heat_transfer_data.py**: Material properties and blood product specifications
 - **test_thermal_model.py**: Unit testing
 
+### `src/simulation/`
+Dynamic system simulation and modeling:
+- **system_state.py**: System state management
+- **time_step.py**: Time-based temperature evolution using RK4 and physics model
+- **thermal_system.py**: Controller interface
+- **test_simulation.py**: Unit testing
+
 ### `src/controller/`
 Temperature control algorithms and safety systems:
 - Control logic (PID)
 - Safety monitoring and limits
 - Control system interfaces
-
-### `src/simulation/`
-Dynamic system simulation and modeling:
-- Time-based temperature evolution
-- System state management
-- Integration with physics model
 
 ### `src/dashboard/`
 User interface and system monitoring:
@@ -103,10 +133,8 @@ User interface and system monitoring:
 ### Phase 1: Thermal Physics Model (Completed 06/09/2025)
 - Built comprehensive heat transfer calculations
 - Created material properties library
-- Implemented unit tests with full validation
 
-
-### Phase 2: Dynamic Simulation (In Progress)
+### Phase 2: Dynamic Simulation (Completed 06/15/2025)
 - Building time-stepping simulation engine
 - Creating realistic thermal system models
 
