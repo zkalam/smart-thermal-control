@@ -87,13 +87,18 @@ class ThermalSystem:
         elif self.actuator_mode == ActuatorMode.COOLING:
             utilization_pct = (abs(self.current_thermal_power) / self.actuator_limits.max_cooling_power) * 100
             
+        is_saturated = False
+        if self.commanded_power > 0:  # Heating command
+            is_saturated = self.commanded_power > self.actuator_limits.max_heating_power
+        elif self.commanded_power < 0:  # Cooling command  
+            is_saturated = abs(self.commanded_power) > self.actuator_limits.max_cooling_power
+            
         return {
             'mode': self.actuator_mode.value,
             'commanded_power_w': self.commanded_power,
             'actual_power_w': self.current_thermal_power,
             'power_utilization_pct': utilization_pct,
-            'is_saturated': abs(self.commanded_power) > max(self.actuator_limits.max_heating_power, 
-                                                           self.actuator_limits.max_cooling_power),
+            'is_saturated': is_saturated, 
             'in_deadband': self.actuator_mode == ActuatorMode.DEADBAND,
             'max_heating_w': self.actuator_limits.max_heating_power,
             'max_cooling_w': self.actuator_limits.max_cooling_power
