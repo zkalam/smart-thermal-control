@@ -49,8 +49,8 @@ def calculate_dT_dt(current_state: SystemState, thermal_power: float = 0.0,
         area=geometry.area,
         temp_surface=current_state.blood_temperature,
         temp_fluid=current_state.ambient_temperature,
+        air_velocity=current_state.air_velocity,
         orientation='vertical',
-        air_velocity=current_state.air_velocity
     )
     
     q_radiation = radiation_heat_transfer(
