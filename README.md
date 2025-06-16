@@ -1,5 +1,3 @@
-# Smart Thermal Control
-
 # Smart Thermal Control System
 
 **Medical-grade temperature control system for critical blood storage applications**
