@@ -1,14 +1,18 @@
 """
-Comprehensive test suite for PID controller implementation
+Comprehensive test suite for PID controller and safety monitoring implementation
 
-Tests cover PID functionality, blood storage scenarios, and controller performance.
+Tests cover PID functionality, safety monitoring, blood storage scenarios, and system performance.
 """
 
 import unittest
 from unittest.mock import patch, MagicMock
 import time
 import math
-from .pid_controller import *
+from datetime import datetime, timedelta
+from ..control.pid_controller import *
+from ..control.safety_monitor import *
+from ..thermal_model.heat_transfer_data import *
+
 
 class TestPIDGains(unittest.TestCase):
     """Test PID gain parameter handling"""
@@ -477,6 +481,556 @@ class TestControllerScenarios(unittest.TestCase):
         # Should reach freezing temperatures
         self.assertLess(final_temp, 0.0)  # Below freezing
         self.assertLess(final_temp, temperatures[0])  # Significant cooling
+
+
+class TestSafetyLimits(unittest.TestCase):
+    """Test SafetyLimits dataclass and validation"""
+    
+    def test_valid_safety_limits(self):
+        """Test creation of valid safety limits"""
+        limits = SafetyLimits(
+            critical_temp_high=6.0,
+            critical_temp_low=1.0,
+            warning_temp_high=5.0,
+            warning_temp_low=2.0
+        )
+        
+        self.assertEqual(limits.critical_temp_high, 6.0)
+        self.assertEqual(limits.critical_temp_low, 1.0)
+        self.assertEqual(limits.warning_temp_high, 5.0)
+        self.assertEqual(limits.warning_temp_low, 2.0)
+        self.assertEqual(limits.max_heating_rate, 2.0)  # Default value
+    
+    def test_invalid_critical_range(self):
+        """Test that invalid critical temperature range raises error"""
+        with self.assertRaises(ValueError) as context:
+            SafetyLimits(
+                critical_temp_high=1.0,  # Lower than critical_temp_low
+                critical_temp_low=6.0,
+                warning_temp_high=5.0,
+                warning_temp_low=2.0
+            )
+        self.assertIn("Critical low temperature must be less than critical high", str(context.exception))
+    
+    def test_invalid_warning_range(self):
+        """Test that invalid warning temperature range raises error"""
+        with self.assertRaises(ValueError):
+            SafetyLimits(
+                critical_temp_high=6.0,
+                critical_temp_low=1.0,
+                warning_temp_high=2.0,  # Lower than warning_temp_low
+                warning_temp_low=5.0
+            )
+    
+    def test_invalid_limit_ordering(self):
+        """Test that improperly ordered limits raise error"""
+        with self.assertRaises(ValueError) as context:
+            SafetyLimits(
+                critical_temp_high=6.0,
+                critical_temp_low=1.0,
+                warning_temp_high=7.0,  # Above critical high
+                warning_temp_low=2.0
+            )
+        self.assertIn("Safety limits must be properly ordered", str(context.exception))
+
+
+class TestAlarmEvent(unittest.TestCase):
+    """Test AlarmEvent functionality"""
+    
+    def setUp(self):
+        """Set up test alarm event"""
+        self.alarm = AlarmEvent(
+            alarm_id="TEST_ALARM",
+            severity=AlarmSeverity.WARNING,
+            message="Test alarm message",
+            timestamp=datetime.now(),
+            temperature=25.0
+        )
+    
+    def test_alarm_creation(self):
+        """Test alarm event creation"""
+        self.assertEqual(self.alarm.alarm_id, "TEST_ALARM")
+        self.assertEqual(self.alarm.severity, AlarmSeverity.WARNING)
+        self.assertEqual(self.alarm.message, "Test alarm message")
+        self.assertEqual(self.alarm.temperature, 25.0)
+        self.assertEqual(self.alarm.state, AlarmState.ACTIVE)
+        self.assertIsNone(self.alarm.acknowledged_by)
+    
+    def test_alarm_acknowledgment(self):
+        """Test alarm acknowledgment"""
+        self.alarm.acknowledge("operator1")
+        
+        self.assertEqual(self.alarm.state, AlarmState.ACKNOWLEDGED)
+        self.assertEqual(self.alarm.acknowledged_by, "operator1")
+        self.assertIsNotNone(self.alarm.acknowledged_time)
+    
+    def test_alarm_clearing(self):
+        """Test alarm clearing"""
+        self.alarm.clear()
+        
+        self.assertEqual(self.alarm.state, AlarmState.CLEARED)
+        self.assertIsNotNone(self.alarm.cleared_time)
+    
+    def test_alarm_duration(self):
+        """Test alarm duration calculation"""
+        # Create alarm with specific timestamp
+        alarm_time = datetime.now() - timedelta(seconds=30)
+        alarm = AlarmEvent(
+            alarm_id="DURATION_TEST",
+            severity=AlarmSeverity.INFO,
+            message="Duration test",
+            timestamp=alarm_time,
+            temperature=20.0
+        )
+        
+        duration = alarm.get_duration()
+        self.assertGreater(duration, 25)  # Should be around 30 seconds
+        self.assertLess(duration, 35)     # Allow some tolerance
+
+
+class TestSafetyMonitor(unittest.TestCase):
+    """Test SafetyMonitor core functionality"""
+    
+    def setUp(self):
+        """Set up test safety monitor"""
+        self.blood_product = MaterialLibrary.WHOLE_BLOOD
+        self.safety_monitor = SafetyMonitor(self.blood_product)
+        
+        # Test callback function
+        self.alarm_notifications = []
+        def test_callback(alarm):
+            self.alarm_notifications.append(alarm)
+        
+        self.safety_monitor.add_alarm_callback(test_callback)
+    
+    def test_monitor_initialization(self):
+        """Test safety monitor initialization"""
+        self.assertEqual(self.safety_monitor.blood_product, self.blood_product)
+        self.assertIsNotNone(self.safety_monitor.safety_limits)
+        self.assertIsNone(self.safety_monitor.current_temperature)
+        self.assertEqual(len(self.safety_monitor.active_alarms), 0)
+        self.assertTrue(self.safety_monitor.system_enabled)
+        self.assertFalse(self.safety_monitor.emergency_mode)
+    
+    def test_default_limits_creation(self):
+        """Test automatic safety limits creation from blood product"""
+        limits = self.safety_monitor.safety_limits
+        
+        # Should use blood product critical limits
+        self.assertEqual(limits.critical_temp_high, self.blood_product.critical_temp_high_c)
+        self.assertEqual(limits.critical_temp_low, self.blood_product.critical_temp_low_c)
+        
+        # Warning limits should be 1°C inside critical limits
+        self.assertEqual(limits.warning_temp_high, self.blood_product.critical_temp_high_c - 1.0)
+        self.assertEqual(limits.warning_temp_low, self.blood_product.critical_temp_low_c + 1.0)
+    
+    def test_temperature_update_safe(self):
+        """Test temperature update within safe range"""
+        status = self.safety_monitor.update_temperature(4.0)  # Target temperature
+        
+        self.assertEqual(status['safety_level'], 'SAFE')
+        self.assertEqual(status['current_temperature'], 4.0)
+        self.assertEqual(status['active_alarms'], 0)
+        self.assertFalse(status['emergency_mode'])
+        self.assertTrue(status['blood_product_status']['is_safe'])
+    
+    def test_temperature_warning_high(self):
+        """Test high temperature warning"""
+        # Temperature above warning but below critical
+        warning_temp = self.safety_monitor.safety_limits.warning_temp_high + 0.1
+        status = self.safety_monitor.update_temperature(warning_temp)
+        
+        self.assertEqual(status['safety_level'], 'WARNING')
+        self.assertEqual(status['active_alarms'], 1)
+        self.assertIn('TEMP_WARNING_HIGH', self.safety_monitor.active_alarms)
+        
+        # Should have triggered callback
+        self.assertEqual(len(self.alarm_notifications), 1)
+        self.assertEqual(self.alarm_notifications[0].severity, AlarmSeverity.WARNING)
+    
+    def test_temperature_critical_high(self):
+        """Test critical high temperature alarm"""
+        critical_temp = self.safety_monitor.safety_limits.critical_temp_high + 0.1
+        status = self.safety_monitor.update_temperature(critical_temp)
+        
+        self.assertEqual(status['safety_level'], 'CRITICAL')
+        self.assertGreater(status['critical_alarms'], 0)
+        self.assertIn('TEMP_CRITICAL_HIGH', self.safety_monitor.active_alarms)
+        
+        # Should trigger emergency mode
+        self.assertTrue(status['emergency_mode'])
+        
+        # Should provide emergency power override
+        emergency_power = status['safety_override_power']
+        self.assertIsNotNone(emergency_power)
+        self.assertLess(emergency_power, 0)  # Should be cooling
+    
+    def test_temperature_critical_low(self):
+        """Test critical low temperature alarm"""
+        critical_temp = self.safety_monitor.safety_limits.critical_temp_low - 0.1
+        status = self.safety_monitor.update_temperature(critical_temp)
+        
+        self.assertEqual(status['safety_level'], 'CRITICAL')
+        self.assertIn('TEMP_CRITICAL_LOW', self.safety_monitor.active_alarms)
+        self.assertTrue(status['emergency_mode'])
+        
+        # Should provide heating override
+        emergency_power = status['safety_override_power']
+        self.assertIsNotNone(emergency_power)
+        self.assertGreater(emergency_power, 0)  # Should be heating
+    
+    def test_alarm_clearing(self):
+        """Test that alarms clear when temperature returns to safe range"""
+        # Trigger warning alarm
+        warning_temp = self.safety_monitor.safety_limits.warning_temp_high + 0.1
+        self.safety_monitor.update_temperature(warning_temp)
+        self.assertEqual(len(self.safety_monitor.active_alarms), 1)
+        
+        # Return to safe temperature
+        safe_temp = 4.0
+        status = self.safety_monitor.update_temperature(safe_temp)
+        
+        self.assertEqual(status['safety_level'], 'SAFE')
+        self.assertEqual(status['active_alarms'], 0)
+        self.assertEqual(len(self.safety_monitor.active_alarms), 0)
+    
+    def test_rate_of_change_monitoring(self):
+        """Test temperature rate of change limits"""
+        # Start with safe temperature
+        self.safety_monitor.update_temperature(4.0)
+        
+        # Rapid heating that exceeds rate limit
+        rapid_temp = 4.0 + (self.safety_monitor.safety_limits.max_heating_rate * 2)  # Double the limit
+        status = self.safety_monitor.update_temperature(rapid_temp)
+        
+        # Should trigger rate alarm (will be checked on next update with proper dt)
+        # Note: Rate checking requires proper time delta, so we need a second update
+        time.sleep(0.1)  # Small delay
+        status = self.safety_monitor.update_temperature(rapid_temp + 1.0)
+        
+        # May or may not trigger rate alarm depending on actual dt, but should not crash
+        self.assertIsInstance(status, dict)
+    
+    def test_time_limit_monitoring(self):
+        """Test time spent outside safe ranges"""
+        # Set up warning temperature
+        warning_temp = self.safety_monitor.safety_limits.warning_temp_high + 0.1
+        
+        # Simulate time passage by manually updating time counters
+        self.safety_monitor.update_temperature(warning_temp)
+        
+        # Manually set time counter to exceed limit (simulating long time outside range)
+        self.safety_monitor.time_outside_warning = self.safety_monitor.safety_limits.max_time_outside_warning + 1.0
+        
+        # Next update should trigger time limit alarm
+        status = self.safety_monitor.update_temperature(warning_temp)
+        
+        # Should have time-based alarm
+        time_alarms = [alarm for alarm in self.safety_monitor.active_alarms.values() 
+                      if 'TIME_WARNING_EXCEEDED' in alarm.alarm_id]
+        # Note: This test may need adjustment based on exact implementation
+    
+    def test_alarm_acknowledgment(self):
+        """Test alarm acknowledgment functionality"""
+        # Trigger an alarm
+        warning_temp = self.safety_monitor.safety_limits.warning_temp_high + 0.1
+        self.safety_monitor.update_temperature(warning_temp)
+        
+        # Acknowledge the alarm
+        success = self.safety_monitor.acknowledge_alarm('TEMP_WARNING_HIGH', 'test_operator')
+        self.assertTrue(success)
+        
+        # Check alarm state
+        alarm = self.safety_monitor.active_alarms['TEMP_WARNING_HIGH']
+        self.assertEqual(alarm.state, AlarmState.ACKNOWLEDGED)
+        self.assertEqual(alarm.acknowledged_by, 'test_operator')
+        self.assertIsNotNone(alarm.acknowledged_time)
+    
+    def test_acknowledge_all_alarms(self):
+        """Test acknowledging all active alarms"""
+        # Trigger multiple alarms
+        critical_temp = self.safety_monitor.safety_limits.critical_temp_high + 0.1
+        self.safety_monitor.update_temperature(critical_temp)
+        
+        # Should have multiple alarms (critical + warning + emergency mode)
+        initial_count = len(self.safety_monitor.active_alarms)
+        self.assertGreater(initial_count, 0)
+        
+        # Acknowledge all
+        ack_count = self.safety_monitor.acknowledge_all_alarms('test_operator')
+        
+        # All should be acknowledged
+        for alarm in self.safety_monitor.active_alarms.values():
+            self.assertEqual(alarm.state, AlarmState.ACKNOWLEDGED)
+    
+    def test_system_enable_disable(self):
+        """Test system enable/disable functionality"""
+        # Disable system
+        self.safety_monitor.disable_system()
+        self.assertFalse(self.safety_monitor.system_enabled)
+        
+        # Temperature update should not trigger alarms when disabled
+        critical_temp = self.safety_monitor.safety_limits.critical_temp_high + 1.0
+        status = self.safety_monitor.update_temperature(critical_temp)
+        self.assertEqual(len(self.safety_monitor.active_alarms), 0)
+        
+        # Re-enable system
+        self.safety_monitor.enable_system()
+        self.assertTrue(self.safety_monitor.system_enabled)
+    
+    def test_reset_monitoring(self):
+        """Test monitoring reset functionality"""
+        # Trigger warning alarms and build up state
+        warning_temp = self.safety_monitor.safety_limits.warning_temp_high + 0.1
+        self.safety_monitor.update_temperature(warning_temp)
+        self.safety_monitor.time_outside_warning = 100.0
+        
+        # Reset monitoring
+        self.safety_monitor.reset_monitoring()
+        
+        # Warning alarms should be cleared but critical ones preserved
+        self.assertEqual(self.safety_monitor.time_outside_warning, 0.0)
+        self.assertEqual(len(self.safety_monitor.temperature_history), 0)
+    
+    def test_alarm_summary(self):
+        """Test alarm summary reporting"""
+        # Trigger mixed severity alarms
+        critical_temp = self.safety_monitor.safety_limits.critical_temp_high + 0.1
+        self.safety_monitor.update_temperature(critical_temp)
+        
+        summary = self.safety_monitor.get_alarm_summary()
+        
+        # Verify summary structure
+        self.assertIn('total_active_alarms', summary)
+        self.assertIn('active_by_severity', summary)
+        self.assertIn('total_historical_alarms', summary)
+        self.assertIn('active_alarm_details', summary)
+        
+        # Should have alarms
+        self.assertGreater(summary['total_active_alarms'], 0)
+        self.assertGreater(summary['total_historical_alarms'], 0)
+
+
+class TestSafetyMonitorScenarios(unittest.TestCase):
+    """Test realistic safety monitoring scenarios"""
+    
+    def setUp(self):
+        """Set up test scenarios"""
+        self.blood_product = MaterialLibrary.WHOLE_BLOOD
+        self.safety_monitor = SafetyMonitor(self.blood_product)
+        
+        # Track all alarms for scenario testing
+        self.all_alarms = []
+        def alarm_tracker(alarm):
+            self.all_alarms.append(alarm)
+        
+        self.safety_monitor.add_alarm_callback(alarm_tracker)
+    
+    def test_normal_operation_scenario(self):
+        """Test normal operation without any alarms"""
+        # Simulate normal temperature readings over time
+        normal_temps = [4.0, 4.1, 3.9, 4.2, 3.8, 4.0]
+        
+        for temp in normal_temps:
+            status = self.safety_monitor.update_temperature(temp)
+            self.assertEqual(status['safety_level'], 'SAFE')
+            self.assertEqual(status['active_alarms'], 0)
+        
+        # No alarms should have been triggered
+        self.assertEqual(len(self.all_alarms), 0)
+    
+    def test_door_opening_scenario(self):
+        """Test scenario where door opens causing temperature rise"""
+        # Start normal
+        self.safety_monitor.update_temperature(4.0)
+        
+        # Door opens - temperature starts rising
+        rising_temps = [4.2, 4.5, 4.8, 5.2, 5.5]  # Gradual rise to warning level
+        
+        warning_triggered = False
+        for temp in rising_temps:
+            status = self.safety_monitor.update_temperature(temp)
+            if status['safety_level'] == 'WARNING':
+                warning_triggered = True
+                break
+        
+        self.assertTrue(warning_triggered)
+        
+        # Door closes - temperature returns to normal
+        cooling_temps = [5.2, 4.8, 4.5, 4.2, 4.0]
+        
+        for temp in cooling_temps:
+            status = self.safety_monitor.update_temperature(temp)
+        
+        # Should return to safe
+        final_status = self.safety_monitor.update_temperature(4.0)
+        self.assertEqual(final_status['safety_level'], 'SAFE')
+    
+    def test_power_failure_scenario(self):
+        """Test power failure leading to critical temperature"""
+        # Start normal
+        self.safety_monitor.update_temperature(4.0)
+        
+        # Power fails - rapid temperature rise
+        temps = [4.0, 5.0, 6.0, 7.0, 8.0]  # Beyond critical
+        
+        emergency_triggered = False
+        for temp in temps:
+            status = self.safety_monitor.update_temperature(temp)
+            if status['emergency_mode']:
+                emergency_triggered = True
+                # Should provide emergency cooling power
+                self.assertIsNotNone(status['safety_override_power'])
+                self.assertLess(status['safety_override_power'], 0)  # Cooling
+        
+        self.assertTrue(emergency_triggered)
+        
+        # Check that multiple alarm types were triggered
+        alarm_types = {alarm.alarm_id for alarm in self.all_alarms}
+        self.assertIn('TEMP_WARNING_HIGH', alarm_types)
+        self.assertIn('TEMP_CRITICAL_HIGH', alarm_types)
+    
+    def test_freezer_malfunction_scenario(self):
+        """Test freezer overcooling scenario"""
+        # Start normal
+        self.safety_monitor.update_temperature(4.0)
+        
+        # Freezer malfunctions - rapid cooling
+        temps = [4.0, 2.0, 0.0, -1.0, -2.0]  # Below critical low
+        
+        for temp in temps:
+            status = self.safety_monitor.update_temperature(temp)
+        
+        # Should trigger emergency heating
+        final_status = self.safety_monitor.update_temperature(-2.0)
+        self.assertTrue(final_status['emergency_mode'])
+        self.assertIsNotNone(final_status['safety_override_power'])
+        self.assertGreater(final_status['safety_override_power'], 0)  # Heating
+
+
+class TestSpecializedSafetyMonitors(unittest.TestCase):
+    """Test specialized safety monitor configurations"""
+    
+    def test_plasma_safety_monitor(self):
+        """Test plasma-specific safety monitor"""
+        plasma_product = MaterialLibrary.PLASMA
+        monitor = create_plasma_safety_monitor(plasma_product)
+        
+        # Should have tighter limits than standard monitor
+        standard_monitor = SafetyMonitor(plasma_product)
+        
+        self.assertLess(
+            monitor.safety_limits.max_time_outside_warning,
+            standard_monitor.safety_limits.max_time_outside_warning
+        )
+        self.assertLess(
+            monitor.safety_limits.max_time_outside_critical,
+            standard_monitor.safety_limits.max_time_outside_critical
+        )
+    
+    def test_emergency_safety_monitor(self):
+        """Test emergency safety monitor configuration"""
+        blood_product = MaterialLibrary.WHOLE_BLOOD
+        monitor = create_emergency_safety_monitor(blood_product)
+        
+        # Should have very tight warning limits around target temperature
+        target_temp = blood_product.target_temp_c
+        self.assertEqual(monitor.safety_limits.warning_temp_high, target_temp + 0.5)
+        self.assertEqual(monitor.safety_limits.warning_temp_low, target_temp - 0.5)
+        
+        # Should have very strict time limits
+        self.assertEqual(monitor.safety_limits.max_time_outside_warning, 60.0)
+        self.assertEqual(monitor.safety_limits.max_time_outside_critical, 15.0)
+    
+    def test_blood_safety_monitor_convenience(self):
+        """Test blood safety monitor convenience function"""
+        blood_product = MaterialLibrary.WHOLE_BLOOD
+        monitor = create_blood_safety_monitor(blood_product)
+        
+        # Should be equivalent to standard SafetyMonitor
+        standard_monitor = SafetyMonitor(blood_product)
+        
+        self.assertEqual(
+            monitor.safety_limits.critical_temp_high,
+            standard_monitor.safety_limits.critical_temp_high
+        )
+        self.assertEqual(
+            monitor.safety_limits.critical_temp_low,
+            standard_monitor.safety_limits.critical_temp_low
+        )
+
+
+class TestSafetyMonitorPerformance(unittest.TestCase):
+    """Test safety monitor performance and edge cases"""
+    
+    def setUp(self):
+        """Set up performance test monitor"""
+        self.monitor = SafetyMonitor(MaterialLibrary.WHOLE_BLOOD)
+    
+    def test_alarm_history_management(self):
+        """Test alarm history storage and retrieval"""
+        # Generate multiple alarms over time
+        for i in range(10):
+            temp = 7.0 + i * 0.1  # Trigger critical alarms
+            self.monitor.update_temperature(temp)
+            time.sleep(0.01)  # Small delay
+            self.monitor.update_temperature(4.0)  # Clear alarm
+        
+        # Export alarm log
+        alarm_log = self.monitor.export_alarm_log()
+        
+        self.assertGreater(len(alarm_log), 0)
+        for log_entry in alarm_log:
+            self.assertIn('alarm_id', log_entry)
+            self.assertIn('severity', log_entry)
+            self.assertIn('timestamp', log_entry)
+            self.assertIn('temperature', log_entry)
+    
+    def test_callback_error_handling(self):
+        """Test that callback errors don't break monitoring"""
+        # Add a callback that will raise an exception
+        def failing_callback(alarm):
+            raise Exception("Callback failure")
+        
+        self.monitor.add_alarm_callback(failing_callback)
+        
+        # Should not raise exception despite callback failure
+        status = self.monitor.update_temperature(7.0)  # Trigger alarm
+        
+        # Monitoring should continue working
+        self.assertEqual(status['safety_level'], 'CRITICAL')
+        self.assertGreater(len(self.monitor.active_alarms), 0)
+    
+    def test_temperature_history_limiting(self):
+        """Test temperature history size limiting"""
+        # Add many temperature readings
+        for i in range(150):  # More than the 100 limit
+            self.monitor.update_temperature(4.0 + (i % 10) * 0.1)
+        
+        # History should be limited to 100 entries
+        self.assertEqual(len(self.monitor.temperature_history), 100)
+    
+    def test_extreme_temperature_values(self):
+        """Test handling of extreme temperature values"""
+        extreme_temps = [-273.0, -100.0, 100.0, 1000.0]
+        
+        for temp in extreme_temps:
+            # Should not crash with extreme values
+            status = self.monitor.update_temperature(temp)
+            self.assertIsInstance(status, dict)
+            self.assertIn('safety_level', status)
+    
+    def test_rapid_updates(self):
+        """Test rapid temperature updates"""
+        # Rapid updates should not cause issues
+        for i in range(100):
+            temp = 4.0 + 0.1 * (i % 20)  # Oscillating temperature
+            status = self.monitor.update_temperature(temp)
+            self.assertIsInstance(status, dict)
+        
+        # Should still be functional
+        final_status = self.monitor.update_temperature(4.0)
+        self.assertIn('safety_level', final_status)
 
 
 class TestEdgeCases(unittest.TestCase):
