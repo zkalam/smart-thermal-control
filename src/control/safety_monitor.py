@@ -1,7 +1,5 @@
 """
-Safety monitoring system for blood storage thermal control.
-
-Provides automated safety checking, alarm management, and fail-safe operations
+This module provides automated safety checking, alarm management, and fail-safe operations
 with medical-grade accuracy and FDA compliance considerations.
 """
 

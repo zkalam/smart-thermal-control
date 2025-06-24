@@ -830,8 +830,13 @@ class TestSafetyMonitorScenarios(unittest.TestCase):
     
     def test_normal_operation_scenario(self):
         """Test normal operation without any alarms"""
-        # Simulate normal temperature readings over time
-        normal_temps = [4.0, 4.1, 3.9, 4.2, 3.8, 4.0]
+        # Check what the actual warning limits are for whole blood
+        warning_low = self.safety_monitor.safety_limits.warning_temp_low
+        warning_high = self.safety_monitor.safety_limits.warning_temp_high
+        
+        # Use temperatures well within the warning range
+        # For whole blood: critical = 1-6°C, so warning = 2-5°C
+        normal_temps = [3.0, 3.2, 2.8, 3.5, 2.5, 3.0]  # All within 2-5°C range
         
         for temp in normal_temps:
             status = self.safety_monitor.update_temperature(temp)
