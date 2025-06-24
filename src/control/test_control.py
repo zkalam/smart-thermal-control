@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import time
 import math
-from ..control_system.pid_controller import *
+from .pid_controller import *
 
 
 class TestPIDGains(unittest.TestCase):
