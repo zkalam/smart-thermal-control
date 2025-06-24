@@ -1,6 +1,6 @@
 """
 
-This modeule mplements proportional-integral-derivative control for precise temperature regulation
+This module mplements proportional-integral-derivative control for precise temperature regulation
 with medical-grade accuracy and safety considerations.
 """
 
