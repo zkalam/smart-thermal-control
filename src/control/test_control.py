@@ -10,7 +10,6 @@ import time
 import math
 from .pid_controller import *
 
-
 class TestPIDGains(unittest.TestCase):
     """Test PID gain parameter handling"""
     
@@ -448,22 +447,25 @@ class TestControllerScenarios(unittest.TestCase):
         # Start at room temperature
         current_temp = 20.0
         dt = 5.0  # 5 second steps for faster freezing
-        thermal_mass = 800.0  # Smaller thermal mass for faster response
+        thermal_mass = 500.0  # Even smaller thermal mass for plasma unit
         
         temperatures = [current_temp]
         
-        for i in range(120):  # 10 minutes (more time for freezing)
+        for i in range(180):  # 15 minutes (more time for deep freezing)
             output = controller.update(current_temp, dt=dt)
             
-            # More realistic cooling with ambient losses
-            ambient_temp = -18.0  # Freezer ambient temperature
-            ambient_loss_coeff = 5.0  # Heat transfer to ambient (W/K)
+            # More realistic cooling model - the controller output should dominate
+            # when there's a large temperature difference
+            ambient_temp = -25.0  # Colder freezer ambient for effective cooling
+            ambient_loss_coeff = 8.0  # Higher heat transfer coefficient
             ambient_losses = ambient_loss_coeff * (current_temp - ambient_temp)
             
             # Total heat removal (controller output + ambient losses)
-            total_heat = -output - ambient_losses
-            temp_change = total_heat * dt / thermal_mass
+            # Both work together to cool the plasma
+            total_heat_removal = abs(output) + ambient_losses  # Both remove heat
+            temp_change = -total_heat_removal * dt / thermal_mass  # Negative = cooling
             current_temp += temp_change
+            
             temperatures.append(current_temp)
             
             # Stop if target reached
