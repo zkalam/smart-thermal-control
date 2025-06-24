@@ -11,7 +11,7 @@ import math
 from datetime import datetime, timedelta
 from ..control.pid_controller import *
 from ..control.safety_monitor import *
-from ..thermal_model.heat_transfer_data import *
+from ..thermal_model.heat_transfer_data import MaterialLibrary
 
 
 class TestPIDGains(unittest.TestCase):
@@ -653,7 +653,8 @@ class TestSafetyMonitor(unittest.TestCase):
         critical_temp = self.safety_monitor.safety_limits.critical_temp_high + 0.1
         status = self.safety_monitor.update_temperature(critical_temp)
         
-        self.assertEqual(status['safety_level'], 'CRITICAL')
+        # Critical alarm triggers emergency mode immediately
+        self.assertEqual(status['safety_level'], 'EMERGENCY')
         self.assertGreater(status['critical_alarms'], 0)
         self.assertIn('TEMP_CRITICAL_HIGH', self.safety_monitor.active_alarms)
         
@@ -670,7 +671,8 @@ class TestSafetyMonitor(unittest.TestCase):
         critical_temp = self.safety_monitor.safety_limits.critical_temp_low - 0.1
         status = self.safety_monitor.update_temperature(critical_temp)
         
-        self.assertEqual(status['safety_level'], 'CRITICAL')
+        # Critical alarm triggers emergency mode immediately  
+        self.assertEqual(status['safety_level'], 'EMERGENCY')
         self.assertIn('TEMP_CRITICAL_LOW', self.safety_monitor.active_alarms)
         self.assertTrue(status['emergency_mode'])
         
@@ -997,8 +999,8 @@ class TestSafetyMonitorPerformance(unittest.TestCase):
         # Should not raise exception despite callback failure
         status = self.monitor.update_temperature(7.0)  # Trigger alarm
         
-        # Monitoring should continue working
-        self.assertEqual(status['safety_level'], 'CRITICAL')
+        # Monitoring should continue working (critical alarms trigger emergency mode)
+        self.assertEqual(status['safety_level'], 'EMERGENCY')
         self.assertGreater(len(self.monitor.active_alarms), 0)
     
     def test_temperature_history_limiting(self):
