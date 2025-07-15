@@ -1,15 +1,9 @@
 """
-Smart Thermal Control System - Control Interface
 
 This module provides the main control interface that integrates PID temperature control,
 safety monitoring, and thermal simulation into a unified control system for medical-grade
 blood storage applications.
 
-Key Features:
-- Coordinated control loops with safety overrides
-- Medical-grade precision and FDA compliance
-- Real-time monitoring and emergency responses
-- Clean API for external system integration
 """
 
 from typing import Optional, Dict, Any, Callable, List
