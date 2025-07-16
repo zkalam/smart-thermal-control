@@ -478,7 +478,7 @@ class ControlInterface:
         """Get comprehensive system status"""
         current_temp = self.get_current_temperature()
         pid_status = self.pid_controller.get_status()
-        safety_status = self.safety_monitor.get_safety_status()
+        safety_status = self.safety_monitor._get_safety_status()
         actuator_status = self.thermal_system.get_actuator_status()
         
         # Calculate performance metrics
