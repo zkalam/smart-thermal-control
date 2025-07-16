@@ -609,10 +609,10 @@ class ControlInterface:
         
         return {
             'system_info': {
-                'blood_product': self.blood_product.name,
+                'blood_product': self.blood_product.blood_type,
                 'target_temperature_c': self.config.target_temperature,
                 'volume_liters': self.volume_liters,
-                'container_material': self.container_material.name
+                'container_material': self.container_material.__class__.__name__
             },
             'control_history': control_data,
             'alarm_history': alarm_data,
