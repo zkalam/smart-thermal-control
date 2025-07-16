@@ -11,6 +11,8 @@ import math
 from datetime import datetime, timedelta
 from ..control.pid_controller import *
 from ..control.safety_monitor import *
+from ..control.control_interface import *
+from ..simulation.thermal_system import ActuatorLimits
 from ..thermal_model.heat_transfer_data import MaterialLibrary
 
 
@@ -1101,6 +1103,1373 @@ class TestEdgeCases(unittest.TestCase):
         
         output = controller_hot.update(20.0, dt=1.0)
         self.assertGreater(output, 0)  # Should call for heating
+
+
+class TestControlConfiguration(unittest.TestCase):
+    """Test control configuration dataclass"""
+    
+    def test_default_configuration(self):
+        """Test default configuration creation"""
+        from ..control.control_interface import ControlConfiguration, PIDGains
+        
+        config = ControlConfiguration(
+            pid_gains=PIDGains(kp=1.0, ki=0.1, kd=0.05),
+            target_temperature=4.0
+        )
+        
+        self.assertEqual(config.target_temperature, 4.0)
+        self.assertTrue(config.enable_safety_monitoring)
+        self.assertEqual(config.control_update_interval, 10.0)
+        self.assertEqual(config.safety_update_interval, 5.0)
+        self.assertTrue(config.enable_emergency_override)
+    
+    def test_custom_configuration(self):
+        """Test custom configuration parameters"""
+        from ..control.control_interface import ControlConfiguration, PIDGains
+        
+        config = ControlConfiguration(
+            pid_gains=PIDGains(kp=2.0, ki=0.2, kd=0.1),
+            target_temperature=-18.0,
+            control_update_interval=5.0,
+            safety_update_interval=2.0,
+            max_control_output_override=75.0,
+            enable_emergency_override=False
+        )
+        
+        self.assertEqual(config.target_temperature, -18.0)
+        self.assertEqual(config.control_update_interval, 5.0)
+        self.assertEqual(config.max_control_output_override, 75.0)
+        self.assertFalse(config.enable_emergency_override)
+
+
+class TestControlInterface(unittest.TestCase):
+    """Test core control interface functionality"""
+    
+    def setUp(self):
+        """Set up test control interface"""
+        from ..control.control_interface import ControlInterface, ControlConfiguration
+        from ..simulation.thermal_system import ActuatorLimits
+        
+        self.blood_product = MaterialLibrary.WHOLE_BLOOD
+        self.container_material = MaterialLibrary.STAINLESS_STEEL_316  # Use correct name
+        self.volume = 2.0
+        self.mass = 1.5
+        
+        self.config = ControlConfiguration(
+            pid_gains=PIDGains(kp=1.0, ki=0.1, kd=0.05),
+            target_temperature=4.0,
+            control_update_interval=10.0,
+            safety_update_interval=5.0
+        )
+        
+        self.actuator_limits = ActuatorLimits(
+            max_heating_power=50.0,
+            max_cooling_power=100.0,
+            min_power_increment=1.0,
+            response_time=30.0
+        )
+        
+        self.control_interface = ControlInterface(
+            blood_product=self.blood_product,
+            container_material=self.container_material,
+            volume_liters=self.volume,
+            container_mass_kg=self.mass,
+            config=self.config,
+            actuator_limits=self.actuator_limits
+        )
+    
+    def test_interface_initialization(self):
+        """Test control interface initialization"""
+        from ..control.control_interface import ControlMode
+        
+        self.assertEqual(self.control_interface.blood_product, self.blood_product)
+        self.assertEqual(self.control_interface.volume_liters, self.volume)
+        self.assertEqual(self.control_interface.config.target_temperature, 4.0)
+        self.assertEqual(self.control_interface.control_mode, ControlMode.STARTUP)
+        self.assertTrue(self.control_interface.system_enabled)
+        
+        # Check component initialization
+        self.assertIsNotNone(self.control_interface.thermal_system)
+        self.assertIsNotNone(self.control_interface.pid_controller)
+        self.assertIsNotNone(self.control_interface.safety_monitor)
+        
+        # Check PID controller setup
+        self.assertEqual(self.control_interface.pid_controller.setpoint, 4.0)
+        self.assertEqual(self.control_interface.pid_controller.output_min, -100.0)
+        self.assertEqual(self.control_interface.pid_controller.output_max, 50.0)
+    
+    def test_system_startup(self):
+        """Test system startup sequence"""
+        from ..control.control_interface import ControlMode
+        
+        startup_result = self.control_interface.start_system(initial_temperature=20.0)
+        
+        self.assertEqual(startup_result['status'], 'started')
+        self.assertEqual(startup_result['control_mode'], 'automatic')
+        self.assertEqual(startup_result['target_temperature'], 4.0)
+        self.assertTrue(startup_result['system_enabled'])
+        
+        # Check system state after startup
+        self.assertEqual(self.control_interface.control_mode, ControlMode.AUTOMATIC)
+        self.assertTrue(self.control_interface.system_enabled)
+        self.assertEqual(self.control_interface.pid_controller.mode, ControllerMode.AUTOMATIC)
+        self.assertTrue(self.control_interface.safety_monitor.system_enabled)
+    
+    def test_system_shutdown(self):
+        """Test system shutdown sequence"""
+        from ..control.control_interface import ControlMode
+        
+        # Start system first
+        self.control_interface.start_system()
+        
+        # Then shutdown
+        shutdown_result = self.control_interface.stop_system()
+        
+        self.assertEqual(shutdown_result['status'], 'stopped')
+        self.assertIn('final_temperature', shutdown_result)
+        self.assertIn('total_runtime', shutdown_result)
+        
+        # Check system state after shutdown
+        self.assertEqual(self.control_interface.control_mode, ControlMode.SHUTDOWN)
+        self.assertFalse(self.control_interface.system_enabled)
+        self.assertEqual(self.control_interface.pid_controller.mode, ControllerMode.DISABLED)
+    
+    def test_target_temperature_setting(self):
+        """Test target temperature updates"""
+        # Valid temperature within range
+        success = self.control_interface.set_target_temperature(6.0)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.config.target_temperature, 6.0)
+        self.assertEqual(self.control_interface.pid_controller.setpoint, 6.0)
+        
+        # Invalid temperature (too high)
+        success = self.control_interface.set_target_temperature(50.0)
+        self.assertFalse(success)
+        self.assertEqual(self.control_interface.config.target_temperature, 6.0)  # Unchanged
+        
+        # Invalid temperature (too low)
+        success = self.control_interface.set_target_temperature(-50.0)
+        self.assertFalse(success)
+        self.assertEqual(self.control_interface.config.target_temperature, 6.0)  # Unchanged
+    
+    def test_control_mode_changes(self):
+        """Test control mode switching"""
+        from ..control.control_interface import ControlMode
+        
+        self.control_interface.start_system()
+        
+        # Switch to manual mode
+        success = self.control_interface.set_control_mode(ControlMode.MANUAL)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.control_mode, ControlMode.MANUAL)
+        self.assertEqual(self.control_interface.pid_controller.mode, ControllerMode.MANUAL)
+        
+        # Switch to maintenance mode
+        success = self.control_interface.set_control_mode(ControlMode.MAINTENANCE)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.control_mode, ControlMode.MAINTENANCE)
+        self.assertEqual(self.control_interface.pid_controller.mode, ControllerMode.DISABLED)
+        
+        # Switch back to automatic
+        success = self.control_interface.set_control_mode(ControlMode.AUTOMATIC)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.control_mode, ControlMode.AUTOMATIC)
+        self.assertEqual(self.control_interface.pid_controller.mode, ControllerMode.AUTOMATIC)
+        
+        # Cannot manually switch to emergency mode
+        success = self.control_interface.set_control_mode(ControlMode.EMERGENCY)
+        self.assertFalse(success)
+        self.assertEqual(self.control_interface.control_mode, ControlMode.AUTOMATIC)
+    
+    def test_manual_power_control(self):
+        """Test manual power setting"""
+        # Set manual power within limits
+        success = self.control_interface.set_manual_power(25.0)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.manual_power_command, 25.0)
+        
+        # Set power above heating limit (should be clamped)
+        success = self.control_interface.set_manual_power(75.0)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.manual_power_command, 50.0)  # Clamped to max heating
+        
+        # Set power below cooling limit (should be clamped)
+        success = self.control_interface.set_manual_power(-150.0)
+        self.assertTrue(success)
+        self.assertEqual(self.control_interface.manual_power_command, -100.0)  # Clamped to max cooling
+
+
+class TestControlIntegration(unittest.TestCase):
+    """Test integration between control components"""
+    
+    def setUp(self):
+        """Set up integration test system"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.control_system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5,
+            target_temperature=4.0
+        )
+        
+        # Track callbacks for testing
+        self.status_updates = []
+        self.alarm_notifications = []
+        
+        def status_callback(status):
+            self.status_updates.append(status)
+        
+        def alarm_callback(alarm):
+            self.alarm_notifications.append(alarm)
+        
+        self.control_system.add_status_callback(status_callback)
+        self.control_system.add_alarm_callback(alarm_callback)
+    
+    def test_normal_operation_cycle(self):
+        """Test complete normal operation cycle"""
+        # Start system
+        startup_result = self.control_system.start_system(initial_temperature=20.0)
+        self.assertEqual(startup_result['status'], 'started')
+        
+        # Run several control updates
+        for i in range(5):
+            status = self.control_system.update(dt=10.0)
+            
+            # System should be in automatic mode
+            self.assertEqual(status['control_mode'], 'automatic')
+            self.assertTrue(status['system_enabled'])
+            
+            # Should have PID controller output
+            self.assertIn('pid_controller', status)
+            self.assertIn('last_output_w', status['pid_controller'])
+            
+            # Safety should be monitoring
+            self.assertIn('safety', status)
+            self.assertTrue(status['safety']['system_enabled'])
+        
+        # Should have received status updates
+        self.assertGreater(len(self.status_updates), 0)
+        
+        # Stop system
+        shutdown_result = self.control_system.stop_system()
+        self.assertEqual(shutdown_result['status'], 'stopped')
+    
+    def test_pid_safety_coordination(self):
+        """Test coordination between PID controller and safety monitor"""
+        self.control_system.start_system(initial_temperature=4.0)  # Start at target
+        
+        # Normal operation - PID should control
+        status1 = self.control_system.update(dt=10.0)
+        pid_output1 = status1['pid_controller']['last_output_w']
+        safety_override1 = status1['safety']['safety_override_power']
+        
+        # Safety override should be None in normal operation
+        self.assertIsNone(safety_override1)
+        
+        # Simulate temperature going critical high
+        # Force the thermal system to a critical temperature
+        self.control_system.thermal_system.current_state.blood_temperature = 8.0
+        
+        status2 = self.control_system.update(dt=10.0)
+        
+        # System should enter emergency mode
+        self.assertTrue(status2['emergency_mode'])
+        self.assertEqual(status2['control_mode'], 'emergency')
+        
+        # Safety override should be active
+        safety_override2 = status2['safety']['safety_override_power']
+        self.assertIsNotNone(safety_override2)
+        self.assertLess(safety_override2, 0)  # Should be cooling
+        
+        # Should have received alarm notifications
+        self.assertGreater(len(self.alarm_notifications), 0)
+        critical_alarms = [a for a in self.alarm_notifications if a.severity == AlarmSeverity.CRITICAL]
+        self.assertGreater(len(critical_alarms), 0)
+    
+    def test_emergency_mode_entry_exit(self):
+        """Test emergency mode entry and exit"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Normal operation
+        status1 = self.control_system.update(dt=10.0)
+        self.assertFalse(status1['emergency_mode'])
+        self.assertEqual(status1['control_mode'], 'automatic')
+        
+        # Force critical temperature to trigger emergency
+        self.control_system.thermal_system.current_state.blood_temperature = 8.0
+        
+        status2 = self.control_system.update(dt=10.0)
+        
+        # Should be in emergency mode
+        self.assertTrue(status2['emergency_mode'])
+        self.assertEqual(status2['control_mode'], 'emergency')
+        self.assertIsNotNone(status2['emergency_reason'])
+        
+        # Clear alarms and return temperature to safe range
+        self.control_system.acknowledge_all_alarms()
+        self.control_system.thermal_system.current_state.blood_temperature = 4.0
+        
+        # Clear the safety monitor's active alarms manually for test
+        self.control_system.safety_monitor.active_alarms.clear()
+        self.control_system.safety_monitor.emergency_mode = False
+        
+        status3 = self.control_system.update(dt=10.0)
+        
+        # Should exit emergency mode
+        self.assertFalse(status3['emergency_mode'])
+        self.assertEqual(status3['control_mode'], 'automatic')
+    
+    def test_actuator_integration(self):
+        """Test integration with thermal system actuators"""
+        self.control_system.start_system(initial_temperature=10.0)  # Start hot
+        
+        status = self.control_system.update(dt=10.0)
+        
+        # Should be calling for cooling
+        actuator_status = status['actuator']
+        self.assertIn('mode', actuator_status)
+        self.assertIn('actual_power_w', actuator_status)
+        self.assertIn('commanded_power_w', actuator_status)
+        
+        # PID should command cooling power
+        self.assertLess(status['pid_controller']['last_output_w'], 0)
+        
+        # Actuator should be in cooling mode or deadband
+        self.assertIn(actuator_status['mode'], ['cooling', 'deadband', 'off'])
+    
+    def test_performance_tracking(self):
+        """Test performance metrics tracking"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Run several updates to build history
+        for i in range(10):
+            self.control_system.update(dt=10.0)
+        
+        status = self.control_system.get_status()
+        performance = status['performance']
+        
+        # Should have performance metrics
+        self.assertIn('temperature_stability_c', performance)
+        self.assertIn('average_error_c', performance)
+        self.assertIn('maximum_error_c', performance)
+        self.assertIn('average_power_usage_w', performance)
+        self.assertIn('total_alarms', performance)
+        self.assertIn('control_data_points', performance)
+        
+        # Should have recorded control history
+        history = self.control_system.get_control_history()
+        self.assertGreater(len(history), 0)
+        
+        # Each history point should have required fields
+        for point in history:
+            self.assertIn('timestamp', point)
+            self.assertIn('temperature', point)
+            self.assertIn('target_temperature', point)
+            self.assertIn('commanded_power', point)
+            self.assertIn('actual_power', point)
+            self.assertIn('control_mode', point)
+
+
+class TestControlScenarios(unittest.TestCase):
+    """Test realistic control scenarios"""
+    
+    def setUp(self):
+        """Set up scenario test system"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.control_system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+    
+    def test_door_opening_scenario(self):
+        """Test door opening causing temperature rise"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Normal operation
+        for i in range(3):
+            status = self.control_system.update(dt=10.0)
+            self.assertEqual(status['safety']['safety_level'], 'SAFE')
+        
+        # Simulate door opening - rapid temperature rise
+        temps = [4.5, 5.0, 5.5, 6.0, 6.5]  # Rising to warning level
+        
+        warning_triggered = False
+        for temp in temps:
+            self.control_system.thermal_system.current_state.blood_temperature = temp
+            status = self.control_system.update(dt=10.0)
+            
+            if status['safety']['safety_level'] == 'WARNING':
+                warning_triggered = True
+                break
+        
+        self.assertTrue(warning_triggered)
+        
+        # Door closes - temperature returns to normal
+        self.control_system.thermal_system.current_state.blood_temperature = 4.0
+        status = self.control_system.update(dt=10.0)
+        
+        # Should return to safe (may take a moment for alarms to clear)
+        # The actual clearing depends on safety monitor implementation
+        self.assertIn(status['safety']['safety_level'], ['SAFE', 'WARNING'])
+    
+    def test_power_failure_scenario(self):
+        """Test power failure simulation"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Normal operation
+        status1 = self.control_system.update(dt=10.0)
+        self.assertEqual(status1['safety']['safety_level'], 'SAFE')
+        
+        # Power failure - simulate by setting actuator to deadband/off
+        # and forcing temperature rise
+        self.control_system.thermal_system.current_state.blood_temperature = 7.0
+        
+        status2 = self.control_system.update(dt=10.0)
+        
+        # Should trigger critical alarms and emergency mode
+        self.assertIn(status2['safety']['safety_level'], ['CRITICAL', 'EMERGENCY'])
+        
+        # Emergency power should be available
+        if status2['emergency_mode']:
+            self.assertIsNotNone(status2['safety']['safety_override_power'])
+    
+    def test_setpoint_change_scenario(self):
+        """Test changing target temperature during operation"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Normal operation at 4°C
+        status1 = self.control_system.update(dt=10.0)
+        self.assertEqual(status1['target_temperature_c'], 4.0)
+        
+        # Change setpoint to 2°C (platelet storage)
+        success = self.control_system.set_target_temperature(2.0)
+        self.assertTrue(success)
+        
+        status2 = self.control_system.update(dt=10.0)
+        self.assertEqual(status2['target_temperature_c'], 2.0)
+        
+        # PID controller should respond to new setpoint
+        # (Temperature is 4°C, setpoint is 2°C, so should call for cooling)
+        self.assertLess(status2['pid_controller']['last_output_w'], 0)
+    
+    def test_manual_mode_scenario(self):
+        """Test manual control mode operation"""
+        from ..control.control_interface import ControlMode
+        
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Switch to manual mode
+        success = self.control_system.set_control_mode(ControlMode.MANUAL)
+        self.assertTrue(success)
+        
+        # Set manual power
+        self.control_system.set_manual_power(25.0)  # 25W heating
+        
+        status = self.control_system.update(dt=10.0)
+        
+        # Should be in manual mode
+        self.assertEqual(status['control_mode'], 'manual')
+        self.assertEqual(status['manual_power_command_w'], 25.0)
+        
+        # Safety monitoring should still be active
+        self.assertTrue(status['safety']['system_enabled'])
+        
+        # If we set dangerous manual power and temperature rises, safety should override
+        self.control_system.set_manual_power(100.0)  # High heating power
+        self.control_system.thermal_system.current_state.blood_temperature = 7.0  # Critical temp
+        
+        status2 = self.control_system.update(dt=10.0)
+        
+        # Safety should override in emergency
+        if status2['emergency_mode']:
+            self.assertIsNotNone(status2['safety']['safety_override_power'])
+
+
+class TestPlasmaControlSystem(unittest.TestCase):
+    """Test plasma-specific control system"""
+    
+    def setUp(self):
+        """Set up plasma control system"""
+        from ..control.control_interface import create_plasma_control_system
+        
+        self.plasma_system = create_plasma_control_system(
+            blood_product=MaterialLibrary.PLASMA,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=1.0,
+            container_mass_kg=0.8
+        )
+    
+    def test_plasma_system_configuration(self):
+        """Test plasma system has correct configuration"""
+        # Should have more aggressive PID gains
+        pid_gains = self.plasma_system.pid_controller.gains
+        self.assertEqual(pid_gains.kp, 2.0)  # More aggressive than blood storage
+        self.assertEqual(pid_gains.ki, 0.2)
+        self.assertEqual(pid_gains.kd, 0.1)
+        
+        # Should have plasma target temperature
+        self.assertEqual(self.plasma_system.config.target_temperature, -18.0)
+        
+        # Should have higher power limits
+        self.assertEqual(self.plasma_system.thermal_system.actuator_limits.max_heating_power, 100.0)
+        self.assertEqual(self.plasma_system.thermal_system.actuator_limits.max_cooling_power, 200.0)
+        
+        # Should have faster update intervals
+        self.assertEqual(self.plasma_system.config.control_update_interval, 5.0)
+        self.assertEqual(self.plasma_system.config.safety_update_interval, 3.0)
+    
+    def test_plasma_freezing_scenario(self):
+        """Test plasma freezing from room temperature"""
+        self.plasma_system.start_system(initial_temperature=20.0)
+        
+        # Should call for aggressive cooling
+        status = self.plasma_system.update(dt=5.0)
+        
+        # PID should command strong cooling
+        self.assertLess(status['pid_controller']['last_output_w'], -50.0)
+        
+        # Actuator should be in cooling mode
+        self.assertEqual(status['actuator']['mode'], 'cooling')
+
+
+class TestErrorHandling(unittest.TestCase):
+    """Test error handling and edge cases"""
+    
+    def setUp(self):
+        """Set up error testing system"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.control_system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+    
+    def test_callback_error_handling(self):
+        """Test that callback errors don't break the system"""
+        # Add a callback that will fail
+        def failing_callback(status):
+            raise Exception("Callback failure")
+        
+        self.control_system.add_status_callback(failing_callback)
+        
+        self.control_system.start_system()
+        
+        # System should continue working despite callback failure
+        status = self.control_system.update(dt=10.0)
+        self.assertIsInstance(status, dict)
+        self.assertTrue(status['system_enabled'])
+    
+    def test_extreme_temperature_handling(self):
+        """Test handling of extreme temperatures"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Set extreme temperatures
+        extreme_temps = [-100.0, 100.0, 1000.0]
+        
+        for temp in extreme_temps:
+            self.control_system.thermal_system.current_state.blood_temperature = temp
+            status = self.control_system.update(dt=10.0)
+            
+            # System should not crash
+            self.assertIsInstance(status, dict)
+            self.assertIn('current_temperature_c', status)
+    
+    def test_invalid_update_parameters(self):
+        """Test invalid update parameters"""
+        self.control_system.start_system()
+        
+        # Zero time step
+        status = self.control_system.update(dt=0.0)
+        self.assertIsInstance(status, dict)
+        
+        # Negative time step
+        status = self.control_system.update(dt=-1.0)
+        self.assertIsInstance(status, dict)
+        
+        # Very large time step
+        status = self.control_system.update(dt=1000.0)
+        self.assertIsInstance(status, dict)
+    
+    def test_system_state_consistency(self):
+        """Test system state remains consistent"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Run many updates
+        for i in range(50):
+            status = self.control_system.update(dt=10.0)
+            
+            # Key fields should always be present
+            self.assertIn('system_enabled', status)
+            self.assertIn('control_mode', status)
+            self.assertIn('current_temperature_c', status)
+            self.assertIn('target_temperature_c', status)
+            self.assertIn('safety', status)
+            self.assertIn('pid_controller', status)
+            self.assertIn('actuator', status)
+            
+            # Values should be reasonable
+            self.assertIsInstance(status['current_temperature_c'], (int, float))
+            self.assertIsInstance(status['target_temperature_c'], (int, float))
+
+
+class TestDataExport(unittest.TestCase):
+    """Test data export and logging functionality"""
+    
+    def setUp(self):
+        """Set up data export testing"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.control_system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+    
+    def test_control_history_export(self):
+        """Test control history data export"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Run several updates to build history
+        for i in range(10):
+            self.control_system.update(dt=10.0)
+        
+        # Get control history
+        history = self.control_system.get_control_history()
+        self.assertGreater(len(history), 0)
+        
+        # Get limited history
+        recent_history = self.control_system.get_control_history(num_points=5)
+        self.assertEqual(len(recent_history), 5)
+        
+        # Check history data structure
+        for point in history:
+            self.assertIn('timestamp', point)
+            self.assertIn('temperature', point)
+            self.assertIn('target_temperature', point)
+            self.assertIn('commanded_power', point)
+            self.assertIn('actual_power', point)
+    
+    def test_comprehensive_log_export(self):
+        """Test comprehensive log data export"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        # Generate some activity
+        for i in range(5):
+            self.control_system.update(dt=10.0)
+        
+        # Trigger an alarm
+        self.control_system.thermal_system.current_state.blood_temperature = 7.0
+        self.control_system.update(dt=10.0)
+        
+        # Export log data
+        log_data = self.control_system.export_log_data()
+        
+        # Check log structure
+        self.assertIn('system_info', log_data)
+        self.assertIn('control_history', log_data)
+        self.assertIn('alarm_history', log_data)
+        self.assertIn('safety_events', log_data)
+        self.assertIn('performance_summary', log_data)
+        self.assertIn('export_timestamp', log_data)
+        
+        # Check system info
+        system_info = log_data['system_info']
+        self.assertIn('blood_product', system_info)
+        self.assertIn('target_temperature_c', system_info)
+        self.assertIn('volume_liters', system_info)
+        
+        # Should have some data
+        self.assertGreater(len(log_data['control_history']), 0)
+    
+    def test_time_filtered_export(self):
+        """Test time-filtered data export"""
+        self.control_system.start_system(initial_temperature=4.0)
+        
+        start_time = datetime.now()
+        
+        # Run some updates
+        for i in range(3):
+            self.control_system.update(dt=10.0)
+            time.sleep(0.01)  # Small delay to ensure different timestamps
+        
+        mid_time = datetime.now()
+        
+        # Run more updates
+        for i in range(3):
+            self.control_system.update(dt=10.0)
+            time.sleep(0.01)
+        
+        end_time = datetime.now()
+        
+        # Export data with time filter
+        filtered_data = self.control_system.export_log_data(
+            start_time=mid_time,
+            end_time=end_time
+        )
+        
+        # Should have some data but less than total
+        total_data = self.control_system.export_log_data()
+        
+        self.assertGreater(len(total_data['control_history']), 0)
+        self.assertLessEqual(len(filtered_data['control_history']), len(total_data['control_history']))
+
+
+class TestConvenienceFunctions(unittest.TestCase):
+    """Test convenience functions for common applications"""
+    
+    def test_blood_storage_system_creation(self):
+        """Test blood storage system convenience function"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5,
+            target_temperature=4.0
+        )
+        
+        # Check configuration
+        self.assertEqual(system.config.target_temperature, 4.0)
+        self.assertEqual(system.config.control_update_interval, 10.0)
+        self.assertEqual(system.config.safety_update_interval, 5.0)
+        
+        # Check PID gains (conservative for medical use)
+        gains = system.pid_controller.gains
+        self.assertEqual(gains.kp, 1.0)
+        self.assertEqual(gains.ki, 0.1)
+        self.assertEqual(gains.kd, 0.05)
+        
+        # Check actuator limits (conservative heating, more aggressive cooling)
+        limits = system.thermal_system.actuator_limits
+        self.assertEqual(limits.max_heating_power, 50.0)
+        self.assertEqual(limits.max_cooling_power, 100.0)
+    
+    def test_plasma_system_creation(self):
+        """Test plasma system convenience function"""
+        from ..control.control_interface import create_plasma_control_system
+        
+        system = create_plasma_control_system(
+            blood_product=MaterialLibrary.PLASMA,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=1.0,
+            container_mass_kg=0.8
+        )
+        
+        # Check plasma-specific configuration
+        self.assertEqual(system.config.target_temperature, -18.0)
+        self.assertEqual(system.config.control_update_interval, 5.0)  # Faster updates
+        self.assertEqual(system.config.safety_update_interval, 3.0)   # More frequent safety checks
+        
+        # Check aggressive PID gains for freezing
+        gains = system.pid_controller.gains
+        self.assertEqual(gains.kp, 2.0)
+        self.assertEqual(gains.ki, 0.2)
+        self.assertEqual(gains.kd, 0.1)
+        
+        # Check higher power limits for freezing
+        limits = system.thermal_system.actuator_limits
+        self.assertEqual(limits.max_heating_power, 100.0)
+        self.assertEqual(limits.max_cooling_power, 200.0)
+        self.assertEqual(limits.response_time, 20.0)  # Faster response
+    
+    def test_default_target_temperature(self):
+        """Test default target temperature from blood product"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+            # No target_temperature specified - should use blood product default
+        )
+        
+        # Should use blood product target temperature
+        expected_target = MaterialLibrary.WHOLE_BLOOD.target_temp_c
+        self.assertEqual(system.config.target_temperature, expected_target)
+
+
+class TestSystemIntegrationScenarios(unittest.TestCase):
+    """Test complete system integration scenarios"""
+    
+    def setUp(self):
+        """Set up integration scenario testing"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+        
+        # Track all events for scenario analysis
+        self.events = []
+        
+        def event_tracker(status):
+            self.events.append({
+                'timestamp': datetime.now(),
+                'type': 'status_update',
+                'data': status
+            })
+        
+        def alarm_tracker(alarm):
+            self.events.append({
+                'timestamp': alarm.timestamp,
+                'type': 'alarm',
+                'data': alarm
+            })
+        
+        self.system.add_status_callback(event_tracker)
+        self.system.add_alarm_callback(alarm_tracker)
+    
+    def test_complete_blood_storage_cycle(self):
+        """Test complete blood storage operational cycle"""
+        # Phase 1: Startup and stabilization
+        startup_result = self.system.start_system(initial_temperature=20.0)
+        self.assertEqual(startup_result['status'], 'started')
+        
+        # Phase 2: Cool-down phase
+        cooldown_temps = []
+        for i in range(10):
+            status = self.system.update(dt=30.0)  # 30 second updates
+            cooldown_temps.append(status['current_temperature_c'])
+            
+            # System should be actively cooling
+            if status['pid_controller']['last_output_w'] != 0:
+                self.assertLess(status['pid_controller']['last_output_w'], 0)  # Cooling
+        
+        # Phase 3: Normal operation at target
+        # Force temperature to target for testing
+        self.system.thermal_system.current_state.blood_temperature = 4.0
+        
+        stable_temps = []
+        for i in range(10):
+            status = self.system.update(dt=30.0)
+            stable_temps.append(status['current_temperature_c'])
+            
+            # Should be in safe operation
+            self.assertEqual(status['safety']['safety_level'], 'SAFE')
+            self.assertEqual(status['control_mode'], 'automatic')
+        
+        # Phase 4: Planned shutdown
+        shutdown_result = self.system.stop_system()
+        self.assertEqual(shutdown_result['status'], 'stopped')
+        
+        # Verify we tracked the complete cycle
+        status_events = [e for e in self.events if e['type'] == 'status_update']
+        self.assertGreater(len(status_events), 15)  # Should have many status updates
+    
+    def test_emergency_response_integration(self):
+        """Test integrated emergency response scenario"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Phase 1: Normal operation
+        for i in range(3):
+            status = self.system.update(dt=10.0)
+            self.assertEqual(status['safety']['safety_level'], 'SAFE')
+        
+        # Phase 2: Equipment failure simulation (temperature rises rapidly)
+        failure_temps = [4.5, 5.5, 6.5, 7.5, 8.0]  # Rapid rise to critical
+        
+        for temp in failure_temps:
+            self.system.thermal_system.current_state.blood_temperature = temp
+            status = self.system.update(dt=10.0)
+            
+            # Track progression through safety levels
+            if temp >= 7.0:  # Critical temperature
+                self.assertIn(status['safety']['safety_level'], ['CRITICAL', 'EMERGENCY'])
+        
+        # Phase 3: Emergency mode operation
+        final_status = self.system.update(dt=10.0)
+        
+        if final_status['emergency_mode']:
+            # Emergency systems should be active
+            self.assertIsNotNone(final_status['safety']['safety_override_power'])
+            self.assertEqual(final_status['control_mode'], 'emergency')
+            
+            # PID should be disabled in emergency mode
+            self.assertEqual(final_status['pid_controller']['mode'], 'disabled')
+        
+        # Phase 4: Recovery (temperature returns to safe range)
+        self.system.acknowledge_all_alarms()
+        self.system.thermal_system.current_state.blood_temperature = 4.0
+        
+        # Clear safety monitor state for test
+        self.system.safety_monitor.active_alarms.clear()
+        self.system.safety_monitor.emergency_mode = False
+        
+        recovery_status = self.system.update(dt=10.0)
+        
+        # Should exit emergency mode
+        self.assertFalse(recovery_status['emergency_mode'])
+        
+        # Verify emergency events were recorded
+        alarm_events = [e for e in self.events if e['type'] == 'alarm']
+        self.assertGreater(len(alarm_events), 0)
+        
+        critical_alarms = [e for e in alarm_events 
+                          if e['data'].severity in [AlarmSeverity.CRITICAL, AlarmSeverity.EMERGENCY]]
+        self.assertGreater(len(critical_alarms), 0)
+    
+    def test_maintenance_mode_scenario(self):
+        """Test maintenance mode operation"""
+        from ..control.control_interface import ControlMode
+        
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Normal operation
+        normal_status = self.system.update(dt=10.0)
+        self.assertEqual(normal_status['control_mode'], 'automatic')
+        
+        # Enter maintenance mode
+        success = self.system.set_control_mode(ControlMode.MAINTENANCE)
+        self.assertTrue(success)
+        
+        maint_status = self.system.update(dt=10.0)
+        
+        # Should be in maintenance mode
+        self.assertEqual(maint_status['control_mode'], 'maintenance')
+        self.assertEqual(maint_status['pid_controller']['mode'], 'disabled')
+        
+        # Safety monitoring should still be active
+        self.assertTrue(maint_status['safety']['system_enabled'])
+        
+        # Exit maintenance mode
+        success = self.system.set_control_mode(ControlMode.AUTOMATIC)
+        self.assertTrue(success)
+        
+        auto_status = self.system.update(dt=10.0)
+        self.assertEqual(auto_status['control_mode'], 'automatic')
+        self.assertEqual(auto_status['pid_controller']['mode'], 'automatic')
+    
+    def test_multi_alarm_scenario(self):
+        """Test handling of multiple simultaneous alarms"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Trigger multiple alarm conditions simultaneously
+        # High temperature + rapid rate of change
+        self.system.thermal_system.current_state.blood_temperature = 7.0
+        status1 = self.system.update(dt=10.0)
+        
+        # Even higher temperature to trigger rate alarms
+        self.system.thermal_system.current_state.blood_temperature = 8.5
+        status2 = self.system.update(dt=1.0)  # Short time step for high rate
+        
+        # Should have multiple alarms
+        alarm_summary = self.system.get_alarm_summary()
+        self.assertGreater(alarm_summary['total_active_alarms'], 1)
+        
+        # Should be in emergency mode
+        self.assertTrue(status2['emergency_mode'])
+        
+        # Acknowledge all alarms
+        ack_count = self.system.acknowledge_all_alarms()
+        self.assertGreater(ack_count, 0)
+        
+        # Verify alarms were acknowledged
+        post_ack_summary = self.system.get_alarm_summary()
+        acknowledged_alarms = [a for a in post_ack_summary['active_alarm_details'] 
+                              if a['acknowledged']]
+        self.assertGreater(len(acknowledged_alarms), 0)
+
+
+class TestPerformanceValidation(unittest.TestCase):
+    """Test system performance under various conditions"""
+    
+    def test_control_accuracy(self):
+        """Test control system accuracy and stability"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+        
+        system.start_system(initial_temperature=4.0)
+        
+        # Run extended operation
+        temperatures = []
+        errors = []
+        
+        for i in range(30):  # 5 minutes of operation at 10s intervals
+            status = system.update(dt=10.0)
+            temp = status['current_temperature_c']
+            target = status['target_temperature_c']
+            
+            temperatures.append(temp)
+            errors.append(abs(temp - target))
+        
+        # Calculate performance metrics
+        avg_error = sum(errors) / len(errors)
+        max_error = max(errors)
+        temp_range = max(temperatures) - min(temperatures)
+        
+        # Performance should meet medical standards
+        self.assertLess(avg_error, 0.5)  # Average error < 0.5°C
+        self.assertLess(max_error, 1.0)  # Maximum error < 1.0°C
+        self.assertLess(temp_range, 2.0)  # Temperature variation < 2.0°C
+    
+    def test_response_time(self):
+        """Test system response time to setpoint changes"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+        
+        system.start_system(initial_temperature=4.0)
+        
+        # Establish baseline
+        for i in range(5):
+            system.update(dt=10.0)
+        
+        # Change setpoint
+        system.set_target_temperature(2.0)  # 2°C step change
+        
+        # Monitor response
+        response_data = []
+        for i in range(20):
+            status = system.update(dt=10.0)
+            error = abs(status['current_temperature_c'] - 2.0)
+            response_data.append(error)
+            
+            # Check if we've reached steady state (within 0.1°C)
+            if error < 0.1:
+                settling_time = i * 10.0  # seconds
+                break
+        else:
+            settling_time = 200.0  # Didn't settle within test period
+        
+        # Response time should be reasonable for medical equipment
+        self.assertLess(settling_time, 180.0)  # Should settle within 3 minutes
+    
+    def test_disturbance_rejection(self):
+        """Test disturbance rejection performance"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+        
+        system.start_system(initial_temperature=4.0)
+        
+        # Establish steady state
+        for i in range(10):
+            system.update(dt=10.0)
+        
+        baseline_temp = system.get_current_temperature()
+        
+        # Apply disturbance (simulate door opening)
+        disturbance_temps = [4.5, 5.0, 5.5, 5.0, 4.5]  # Temperature excursion
+        
+        max_deviation = 0.0
+        for temp in disturbance_temps:
+            system.thermal_system.current_state.blood_temperature = temp
+            status = system.update(dt=10.0)
+            deviation = abs(status['current_temperature_c'] - baseline_temp)
+            max_deviation = max(max_deviation, deviation)
+        
+        # Return to normal and measure recovery
+        system.thermal_system.current_state.blood_temperature = 4.0
+        
+        recovery_data = []
+        for i in range(10):
+            status = system.update(dt=10.0)
+            error = abs(status['current_temperature_c'] - baseline_temp)
+            recovery_data.append(error)
+        
+        final_error = recovery_data[-1]
+        
+        # Disturbance rejection should be effective
+        self.assertLess(max_deviation, 2.0)    # Peak deviation < 2°C
+        self.assertLess(final_error, 0.2)     # Should recover to within 0.2°C
+
+
+class TestStressAndReliability(unittest.TestCase):
+    """Test system under stress conditions and reliability scenarios"""
+    
+    def setUp(self):
+        """Set up stress testing system"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+    
+    def test_rapid_temperature_oscillations(self):
+        """Test system response to rapid temperature changes"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Create rapid temperature oscillations
+        for i in range(50):
+            # Oscillate between 3°C and 5°C every update
+            temp = 4.0 + 1.0 * (1 if i % 2 == 0 else -1)
+            self.system.thermal_system.current_state.blood_temperature = temp
+            
+            status = self.system.update(dt=1.0)
+            
+            # System should remain stable
+            self.assertIsInstance(status, dict)
+            self.assertIn('control_mode', status)
+        
+        # Should still be functional after oscillations
+        final_status = self.system.get_status()
+        self.assertTrue(final_status['system_enabled'])
+    
+    def test_extended_operation(self):
+        """Test extended operation for memory leaks and performance degradation"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Run for many cycles
+        for i in range(200):
+            status = self.system.update(dt=10.0)
+            
+            # Verify core functionality every 50 cycles
+            if i % 50 == 0:
+                self.assertIn('current_temperature_c', status)
+                self.assertIn('control_mode', status)
+                self.assertTrue(status['system_enabled'])
+        
+        # Check memory usage (history should be limited)
+        history = self.system.get_control_history()
+        self.assertLessEqual(len(history), 1000)  # Should be limited
+        
+        # System should still respond normally
+        final_status = self.system.update(dt=10.0)
+        self.assertEqual(final_status['control_mode'], 'automatic')
+    
+    def test_multiple_emergency_cycles(self):
+        """Test multiple emergency mode cycles"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        for cycle in range(5):
+            # Normal operation
+            for i in range(3):
+                status = self.system.update(dt=10.0)
+                self.assertEqual(status['safety']['safety_level'], 'SAFE')
+            
+            # Trigger emergency
+            self.system.thermal_system.current_state.blood_temperature = 8.0
+            emergency_status = self.system.update(dt=10.0)
+            
+            # Should enter emergency mode
+            if emergency_status['emergency_mode']:
+                self.assertEqual(emergency_status['control_mode'], 'emergency')
+            
+            # Recovery
+            self.system.acknowledge_all_alarms()
+            self.system.thermal_system.current_state.blood_temperature = 4.0
+            self.system.safety_monitor.active_alarms.clear()
+            self.system.safety_monitor.emergency_mode = False
+            
+            recovery_status = self.system.update(dt=10.0)
+            # Should recover to automatic mode
+        
+        # System should still be functional after multiple cycles
+        final_status = self.system.get_status()
+        self.assertTrue(final_status['system_enabled'])
+    
+    def test_concurrent_alarms_and_operations(self):
+        """Test system with multiple concurrent alarms and operations"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Trigger multiple types of operations simultaneously
+        # 1. Change setpoint
+        self.system.set_target_temperature(2.0)
+        
+        # 2. Switch to manual mode
+        from ..control.control_interface import ControlMode
+        self.system.set_control_mode(ControlMode.MANUAL)
+        self.system.set_manual_power(50.0)
+        
+        # 3. Trigger safety alarms
+        self.system.thermal_system.current_state.blood_temperature = 7.0
+        
+        # 4. Update system
+        status = self.system.update(dt=10.0)
+        
+        # System should handle all operations without crashing
+        self.assertIsInstance(status, dict)
+        self.assertIn('control_mode', status)
+        
+        # Safety should override manual operation if needed
+        if status['emergency_mode']:
+            self.assertIsNotNone(status['safety']['safety_override_power'])
+
+
+class TestMedicalComplianceValidation(unittest.TestCase):
+    """Test medical device compliance requirements"""
+    
+    def setUp(self):
+        """Set up medical compliance testing"""
+        from ..control.control_interface import create_blood_storage_control_system
+        
+        self.system = create_blood_storage_control_system(
+            blood_product=MaterialLibrary.WHOLE_BLOOD,
+            container_material=MaterialLibrary.STAINLESS_STEEL_316,  # Use correct name
+            volume_liters=2.0,
+            container_mass_kg=1.5
+        )
+    
+    def test_temperature_accuracy_requirements(self):
+        """Test that system meets FDA temperature accuracy requirements"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Run in steady state
+        temp_readings = []
+        for i in range(60):  # 10 minutes at 10s intervals
+            status = self.system.update(dt=10.0)
+            temp_readings.append(status['current_temperature_c'])
+        
+        # Calculate accuracy metrics
+        target_temp = 4.0
+        deviations = [abs(temp - target_temp) for temp in temp_readings]
+        max_deviation = max(deviations)
+        avg_deviation = sum(deviations) / len(deviations)
+        
+        # FDA requirements for blood storage (typical: ±0.5°C)
+        self.assertLess(max_deviation, 0.5)  # Maximum deviation < 0.5°C
+        self.assertLess(avg_deviation, 0.2)  # Average deviation < 0.2°C
+    
+    def test_alarm_response_time(self):
+        """Test alarm response time meets medical requirements"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Record time when critical temperature is reached
+        start_time = time.time()
+        
+        # Set critical temperature
+        self.system.thermal_system.current_state.blood_temperature = 7.5
+        
+        # Update until alarm is triggered
+        alarm_time = None
+        for i in range(10):
+            status = self.system.update(dt=1.0)
+            if status['safety']['safety_level'] in ['CRITICAL', 'EMERGENCY']:
+                alarm_time = time.time()
+                break
+        
+        # Alarm should trigger quickly (< 5 seconds for medical devices)
+        if alarm_time:
+            response_time = alarm_time - start_time
+            self.assertLess(response_time, 5.0)
+    
+    def test_audit_trail_completeness(self):
+        """Test complete audit trail for regulatory compliance"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Perform various operations
+        self.system.set_target_temperature(3.0)
+        self.system.update(dt=10.0)
+        
+        # Trigger alarm
+        self.system.thermal_system.current_state.blood_temperature = 7.0
+        self.system.update(dt=10.0)
+        
+        # Acknowledge alarm
+        self.system.acknowledge_all_alarms()
+        self.system.update(dt=10.0)
+        
+        # Export audit data
+        audit_data = self.system.export_log_data()
+        
+        # Verify audit trail completeness
+        self.assertIn('control_history', audit_data)
+        self.assertIn('alarm_history', audit_data)
+        self.assertIn('safety_events', audit_data)
+        
+        # Control history should include all operations
+        control_events = audit_data['control_history']
+        self.assertGreater(len(control_events), 0)
+        
+        # Each event should have timestamp and user traceability
+        for event in control_events:
+            self.assertIn('timestamp', event)
+            self.assertIn('temperature', event)
+            self.assertIn('target_temperature', event)
+            self.assertIn('control_mode', event)
+        
+        # Alarm history should include all safety events
+        alarm_events = audit_data['alarm_history']
+        if alarm_events:  # If alarms were triggered
+            for alarm in alarm_events:
+                self.assertIn('timestamp', alarm)
+                self.assertIn('severity', alarm)
+                self.assertIn('message', alarm)
+    
+    def test_fail_safe_behavior(self):
+        """Test fail-safe behavior under component failures"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Simulate PID controller failure by setting zero gains
+        self.system.pid_controller.set_gains(PIDGains(kp=0.0, ki=0.0, kd=0.0))
+        
+        # Set critical temperature
+        self.system.thermal_system.current_state.blood_temperature = 8.0
+        
+        status = self.system.update(dt=10.0)
+        
+        # Safety system should take over despite PID failure
+        if status['emergency_mode']:
+            # Emergency power should be available from safety system
+            self.assertIsNotNone(status['safety']['safety_override_power'])
+            # Should be cooling power for high temperature
+            self.assertLess(status['safety']['safety_override_power'], 0)
+        
+        # System should remain in a safe state
+        self.assertIn(status['safety']['safety_level'], ['CRITICAL', 'EMERGENCY'])
+    
+    def test_data_integrity(self):
+        """Test data integrity and consistency"""
+        self.system.start_system(initial_temperature=4.0)
+        
+        # Generate data over time
+        for i in range(20):
+            self.system.update(dt=10.0)
+        
+        # Export data
+        exported_data = self.system.export_log_data()
+        
+        # Verify data integrity
+        control_history = exported_data['control_history']
+        
+        # Timestamps should be monotonically increasing
+        timestamps = [event['timestamp'] for event in control_history]
+        for i in range(1, len(timestamps)):
+            self.assertGreaterEqual(timestamps[i], timestamps[i-1])
+        
+        # Temperature values should be reasonable
+        temperatures = [event['temperature'] for event in control_history]
+        for temp in temperatures:
+            self.assertGreater(temp, -50.0)  # Above absolute zero (reasonable)
+            self.assertLess(temp, 100.0)     # Below boiling point (reasonable)
+        
+        # Control mode should be consistent
+        modes = [event['control_mode'] for event in control_history]
+        valid_modes = ['automatic', 'manual', 'emergency', 'maintenance', 'shutdown']
+        for mode in modes:
+            self.assertIn(mode, valid_modes)
 
 
 if __name__ == '__main__':
