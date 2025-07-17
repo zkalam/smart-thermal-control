@@ -362,57 +362,177 @@ class ControlTheoryEducator {
     }
 
     showConceptModal(concept) {
+        // Remove any existing modals first
+        const existingModal = document.querySelector('.concept-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
         // Create educational modal with dark theme styling
         const modal = document.createElement('div');
-        modal.className = 'concept-modal modal-overlay';
+        modal.className = 'concept-modal';
+        
+        // Add inline styles to ensure visibility
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        const conceptKey = Object.keys(this.conceptDatabase).find(key => this.conceptDatabase[key] === concept);
+        
         modal.innerHTML = `
-            <div class="concept-modal-content modal-content">
-                <div class="concept-header">
-                    <h2>${concept.title}</h2>
-                    <button class="close-modal" onclick="this.closest('.concept-modal').remove()">×</button>
+            <div class="concept-modal-content" style="
+                background: var(--bg-panel, #1e293b);
+                color: var(--text-primary, #f1f5f9);
+                border-radius: 12px;
+                padding: 30px;
+                max-width: 700px;
+                max-height: 85vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+                border: 1px solid var(--border-color, #334155);
+                margin: 20px;
+                width: 90%;
+                transform: scale(0.9);
+                transition: transform 0.3s ease;
+            ">
+                <div class="concept-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    border-bottom: 2px solid var(--border-color, #334155);
+                    padding-bottom: 15px;
+                ">
+                    <h2 style="color: var(--text-accent, #60a5fa); margin: 0; font-weight: 700;">${concept.title}</h2>
+                    <button class="close-modal" onclick="this.closest('.concept-modal').remove()" style="
+                        background: #ef4444;
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        width: 32px;
+                        height: 32px;
+                        cursor: pointer;
+                        font-size: 18px;
+                        font-weight: bold;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">×</button>
                 </div>
                 
                 <div class="concept-body">
-                    <div class="definition-section">
-                        <h3>📋 Definition</h3>
-                        <p>${concept.definition}</p>
-                        ${concept.formula ? `<div class="formula-dark">Formula: <code>${concept.formula}</code></div>` : ''}
+                    <div class="definition-section" style="
+                        background: var(--bg-secondary, #1e293b);
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin-bottom: 20px;
+                        border: 1px solid var(--border-color, #334155);
+                    ">
+                        <h3 style="color: var(--text-accent, #60a5fa); margin-bottom: 10px;">📋 Definition</h3>
+                        <p style="color: var(--text-primary, #f1f5f9); line-height: 1.6;">${concept.definition}</p>
+                        ${concept.formula ? `
+                            <div class="formula-dark" style="
+                                background: var(--bg-dark, #020617);
+                                color: var(--text-primary, #f1f5f9);
+                                padding: 15px;
+                                border-radius: 8px;
+                                font-family: 'JetBrains Mono', monospace;
+                                margin: 15px 0;
+                                border-left: 3px solid var(--edu-primary, #6366f1);
+                                border: 1px solid var(--border-color, #334155);
+                            ">
+                                Formula: <code style="color: var(--text-accent, #60a5fa); font-weight: 600;">${concept.formula}</code>
+                            </div>
+                        ` : ''}
                     </div>
                     
                     ${concept.realWorld ? `
-                        <div class="real-world-section">
-                            <h3>🌍 Real-World Analogy</h3>
-                            <p>${concept.realWorld}</p>
+                        <div class="real-world-section" style="
+                            background: var(--bg-secondary, #1e293b);
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            border: 1px solid var(--border-color, #334155);
+                        ">
+                            <h3 style="color: var(--text-accent, #60a5fa); margin-bottom: 10px;">🌍 Real-World Analogy</h3>
+                            <p style="color: var(--text-primary, #f1f5f9); line-height: 1.6;">${concept.realWorld}</p>
                         </div>
                     ` : ''}
                     
                     ${concept.medicalContext ? `
-                        <div class="medical-section">
-                            <h3>🏥 Medical Context</h3>
-                            <p>${concept.medicalContext}</p>
+                        <div class="medical-section" style="
+                            background: rgba(16, 185, 129, 0.1);
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            border-left: 4px solid var(--safe-green, #10b981);
+                            border: 1px solid var(--border-color, #334155);
+                        ">
+                            <h3 style="color: var(--text-accent, #60a5fa); margin-bottom: 10px;">🏥 Medical Context</h3>
+                            <p style="color: var(--text-primary, #f1f5f9); line-height: 1.6;">${concept.medicalContext}</p>
                         </div>
                     ` : ''}
                     
                     ${concept.keyPoints ? `
-                        <div class="key-points-section">
-                            <h3>🔑 Key Points</h3>
-                            <ul>
-                                ${concept.keyPoints.map(point => `<li>${point}</li>`).join('')}
+                        <div class="key-points-section" style="
+                            background: var(--bg-secondary, #1e293b);
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            border: 1px solid var(--border-color, #334155);
+                        ">
+                            <h3 style="color: var(--text-accent, #60a5fa); margin-bottom: 10px;">🔑 Key Points</h3>
+                            <ul style="color: var(--text-secondary, #94a3b8); padding-left: 20px;">
+                                ${concept.keyPoints.map(point => `<li style="margin-bottom: 8px; line-height: 1.5;">${point}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
                     
                     ${concept.commonMistakes ? `
-                        <div class="mistakes-section">
-                            <h3>⚠️ Common Mistakes</h3>
-                            <ul>
-                                ${concept.commonMistakes.map(mistake => `<li>${mistake}</li>`).join('')}
+                        <div class="mistakes-section" style="
+                            background: rgba(245, 158, 11, 0.1);
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            border-left: 4px solid var(--warning-yellow, #f59e0b);
+                            border: 1px solid var(--border-color, #334155);
+                        ">
+                            <h3 style="color: var(--text-accent, #60a5fa); margin-bottom: 10px;">⚠️ Common Mistakes</h3>
+                            <ul style="color: var(--text-secondary, #94a3b8); padding-left: 20px;">
+                                ${concept.commonMistakes.map(mistake => `<li style="margin-bottom: 8px; line-height: 1.5;">${mistake}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
                     
-                    <div class="action-section">
-                        <button onclick="window.controlTheory.demonstrateConcept('${Object.keys(this.conceptDatabase).find(key => this.conceptDatabase[key] === concept)}')">
+                    <div class="action-section" style="
+                        margin-top: 25px;
+                        text-align: center;
+                        padding-top: 20px;
+                        border-top: 1px solid var(--border-color, #334155);
+                    ">
+                        <button onclick="window.controlTheory.demonstrateConcept('${conceptKey}')" style="
+                            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 700;
+                            font-size: 14px;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(99, 102, 241, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                             🧪 See It In Action
                         </button>
                     </div>
@@ -420,10 +540,31 @@ class ControlTheoryEducator {
             </div>
         `;
         
+        // Add click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        // Add escape key to close
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+        
         document.body.appendChild(modal);
         
-        // Add entrance animation
-        setTimeout(() => modal.classList.add('modal-visible'), 10);
+        // Animate in
+        requestAnimationFrame(() => {
+            modal.style.opacity = '1';
+            modal.querySelector('.concept-modal-content').style.transform = 'scale(1)';
+        });
+        
+        console.log(`🎓 Opened modal for: ${concept.title}`);
     }
 
     demonstrateConcept(conceptKey) {
