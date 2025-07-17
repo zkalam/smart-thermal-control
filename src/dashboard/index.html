@@ -41,6 +41,10 @@
                         <span class="value" id="target-temp">4.0</span>
                         <span class="unit">°C</span>
                     </div>
+                    <div class="target-controls">
+                        <input type="range" id="target-slider" min="1.0" max="6.0" step="0.1" value="4.0">
+                        <button onclick="setTargetFromSlider()">Set Target</button>
+                    </div>
                 </div>
                 <div class="status-item">
                     <label>Control Output</label>

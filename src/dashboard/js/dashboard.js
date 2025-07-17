@@ -72,6 +72,14 @@ class ThermalControlDashboard {
                 this.explainStatusItem(item);
             });
         });
+
+        // Target temperature slider
+        const targetSlider = document.getElementById('target-slider');
+        if (targetSlider) {
+            targetSlider.addEventListener('input', () => {
+                updateTargetSliderValue();
+            });
+        }
     }
 
     initializeTooltips() {
@@ -402,8 +410,22 @@ This ensures patient safety and blood product integrity!
 
     // Public methods for external control
     setTargetTemperature(temp) {
-        this.currentData.target = temp;
-        this.updateElement('target-temp', temp.toFixed(1));
+        // Send to real system if available
+        if (window.dataConnector && window.dataConnector.isSystemReady()) {
+            window.dataConnector.setTargetTemperature(temp)
+                .then(result => {
+                    console.log('Target temperature updated in real system');
+                    this.currentData.target = temp;
+                    this.updateElement('target-temp', temp.toFixed(1));
+                })
+                .catch(error => {
+                    console.error('Failed to update target temperature:', error);
+                });
+        } else {
+            // Fallback for simulation mode
+            this.currentData.target = temp;
+            this.updateElement('target-temp', temp.toFixed(1));
+        }
     }
 
     triggerDisturbance(magnitude = 2.0) {
@@ -452,6 +474,24 @@ function triggerDisturbance() {
 function resetSystem() {
     if (window.dashboard) {
         window.dashboard.resetSystem();
+    }
+}
+
+function setTargetFromSlider() {
+    const slider = document.getElementById('target-slider');
+    const targetTemp = parseFloat(slider.value);
+    
+    if (window.dashboard) {
+        window.dashboard.setTargetTemperature(targetTemp);
+    }
+}
+
+function updateTargetSliderValue() {
+    const slider = document.getElementById('target-slider');
+    const display = document.getElementById('target-temp');
+    
+    if (slider && display) {
+        display.textContent = parseFloat(slider.value).toFixed(1);
     }
 }
 

@@ -266,6 +266,48 @@ body {
     color: var(--safe-green);
 }
 
+.target-controls {
+    margin-top: var(--space-sm);
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.target-controls input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.target-controls input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-blue);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.target-controls button {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s ease;
+}
+
+.target-controls button:hover {
+    background: var(--secondary-blue);
+}
+
 /* Educational Note */
 .educational-note {
     background: linear-gradient(135deg, var(--edu-primary), var(--edu-secondary));
