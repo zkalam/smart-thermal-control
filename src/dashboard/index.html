@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Thermal Control System - Educational Dashboard</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h1>🏥 Smart Thermal Control System</h1>
+            <p class="subtitle">Interactive Control Systems Learning Platform</p>
+            <div class="system-status">
+                <span class="status-indicator safe" id="safety-status">SAFE</span>
+                <span class="connection-status" id="connection-status">Connected</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Layout -->
+    <div class="dashboard-container">
+        
+        <!-- Live System Status Panel -->
+        <div class="panel system-status-panel">
+            <h2>🌡️ Live System Status</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <label>Current Temperature</label>
+                    <div class="value-display">
+                        <span class="value" id="current-temp">4.2</span>
+                        <span class="unit">°C</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <label>Target Temperature</label>
+                    <div class="value-display">
+                        <span class="value" id="target-temp">4.0</span>
+                        <span class="unit">°C</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <label>Control Output</label>
+                    <div class="value-display">
+                        <span class="value" id="control-output">-15</span>
+                        <span class="unit">W</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <label>Safety Level</label>
+                    <div class="value-display safety">
+                        <span class="value" id="safety-level">SAFE</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <label>Active Alarms</label>
+                    <div class="value-display">
+                        <span class="value" id="alarm-count">0</span>
+                        <span class="unit">alarms</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <label>Control Mode</label>
+                    <div class="value-display">
+                        <span class="value" id="control-mode">Automatic</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive PID Tuning Laboratory -->
+        <div class="panel pid-tuning-panel">
+            <h2>🎛️ Interactive PID Tuning Laboratory</h2>
+            <div class="educational-note">
+                <p><strong>Learn by Doing:</strong> Adjust the PID parameters below and watch how they affect the system response in real-time!</p>
+            </div>
+            
+            <div class="pid-controls">
+                <div class="pid-parameter">
+                    <label for="kp-slider">
+                        Proportional Gain (Kp)
+                        <span class="help-icon" data-tooltip="Controls how aggressively the system responds to current error">ℹ️</span>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" id="kp-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+                        <span class="slider-value" id="kp-value">1.0</span>
+                    </div>
+                    <div class="parameter-explanation">
+                        <span id="kp-explanation">Higher Kp = faster response, but may cause overshoot</span>
+                    </div>
+                </div>
+
+                <div class="pid-parameter">
+                    <label for="ki-slider">
+                        Integral Gain (Ki)
+                        <span class="help-icon" data-tooltip="Eliminates steady-state error by responding to accumulated error over time">ℹ️</span>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" id="ki-slider" min="0.0" max="1.0" step="0.01" value="0.1">
+                        <span class="slider-value" id="ki-value">0.1</span>
+                    </div>
+                    <div class="parameter-explanation">
+                        <span id="ki-explanation">Higher Ki = eliminates steady-state error, but may cause oscillation</span>
+                    </div>
+                </div>
+
+                <div class="pid-parameter">
+                    <label for="kd-slider">
+                        Derivative Gain (Kd)
+                        <span class="help-icon" data-tooltip="Provides damping by responding to the rate of error change">ℹ️</span>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" id="kd-slider" min="0.0" max="0.5" step="0.005" value="0.05">
+                        <span class="slider-value" id="kd-value">0.05</span>
+                    </div>
+                    <div class="parameter-explanation">
+                        <span id="kd-explanation">Higher Kd = reduces overshoot and oscillation</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preset-buttons">
+                <button class="preset-btn" data-preset="conservative">Conservative Tuning</button>
+                <button class="preset-btn" data-preset="aggressive">Aggressive Tuning</button>
+                <button class="preset-btn" data-preset="medical">Medical Grade</button>
+            </div>
+
+            <div class="try-this-section">
+                <h3>🧪 Try This Experiment:</h3>
+                <div class="experiment-card" id="current-experiment">
+                    <p><strong>Experiment 1:</strong> Increase Kp to 3.0 and observe what happens to the system response. Do you see overshoot?</p>
+                    <button class="try-button" onclick="tryExperiment(1)">Try It!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Theory Concepts Display -->
+        <div class="panel control-theory-panel">
+            <h2>📚 Control Theory in Action</h2>
+            
+            <div class="concept-display">
+                <div class="equation-box">
+                    <h3>PID Equation:</h3>
+                    <div class="equation">
+                        u(t) = K<sub>p</sub>e(t) + K<sub>i</sub>∫e(t)dt + K<sub>d</sub>(de/dt)
+                    </div>
+                    <div class="equation-explanation">
+                        <span>Where: e(t) = setpoint - current_temperature</span>
+                    </div>
+                </div>
+
+                <div class="live-calculations">
+                    <h3>Live PID Term Values:</h3>
+                    <div class="pid-terms">
+                        <div class="term proportional">
+                            <label>P Term:</label>
+                            <span id="p-term-value">-0.8</span>
+                            <div class="term-bar">
+                                <div class="term-fill p-fill" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div class="term integral">
+                            <label>I Term:</label>
+                            <span id="i-term-value">-0.2</span>
+                            <div class="term-bar">
+                                <div class="term-fill i-fill" style="width: 20%"></div>
+                            </div>
+                        </div>
+                        <div class="term derivative">
+                            <label>D Term:</label>
+                            <span id="d-term-value">0.1</span>
+                            <div class="term-bar">
+                                <div class="term-fill d-fill" style="width: 10%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="current-learning">
+                    <h3>💡 What's Happening Now:</h3>
+                    <div class="learning-content" id="learning-content">
+                        <p>The system is maintaining steady temperature. The P term provides the main control effort, while the I term eliminates any small steady-state error.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Visualization Charts -->
+        <div class="panel charts-panel">
+            <h2>📊 Real-Time System Response</h2>
+            
+            <div class="chart-container">
+                <canvas id="temperature-chart" width="800" height="300"></canvas>
+            </div>
+            
+            <div class="chart-controls">
+                <div class="chart-options">
+                    <label>
+                        <input type="checkbox" id="show-setpoint" checked> Show Setpoint
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-error" checked> Show Error
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-output" checked> Show Control Output
+                    </label>
+                </div>
+                <div class="time-controls">
+                    <button onclick="adjustTimeScale(30)">30s</button>
+                    <button onclick="adjustTimeScale(60)" class="active">1m</button>
+                    <button onclick="adjustTimeScale(300)">5m</button>
+                    <button onclick="clearChart()">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safety Systems Education -->
+        <div class="panel safety-panel">
+            <h2>🛡️ Safety Systems Education</h2>
+            
+            <div class="safety-explanation">
+                <div class="safety-level-display">
+                    <div class="safety-indicator safe">
+                        <span class="level">SAFE</span>
+                        <span class="description">All parameters within normal ranges</span>
+                    </div>
+                </div>
+
+                <div class="safety-limits">
+                    <h3>Blood Storage Safety Limits:</h3>
+                    <div class="limits-display">
+                        <div class="limit-item critical-high">
+                            <label>Critical High:</label>
+                            <span>6.0°C</span>
+                            <small>FDA maximum for whole blood</small>
+                        </div>
+                        <div class="limit-item warning-high">
+                            <label>Warning High:</label>
+                            <span>5.0°C</span>
+                            <small>Early warning threshold</small>
+                        </div>
+                        <div class="limit-item target">
+                            <label>Target:</label>
+                            <span>4.0°C</span>
+                            <small>Optimal storage temperature</small>
+                        </div>
+                        <div class="limit-item warning-low">
+                            <label>Warning Low:</label>
+                            <span>2.0°C</span>
+                            <small>Early warning threshold</small>
+                        </div>
+                        <div class="limit-item critical-low">
+                            <label>Critical Low:</label>
+                            <span>1.0°C</span>
+                            <small>FDA minimum for whole blood</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="why-safety-matters">
+                    <h3>🩸 Why Precise Control Matters:</h3>
+                    <ul>
+                        <li><strong>Blood Cell Integrity:</strong> Temperatures outside 1-6°C can damage red blood cells</li>
+                        <li><strong>Bacterial Growth:</strong> Higher temperatures promote dangerous bacterial growth</li>
+                        <li><strong>Freezing Damage:</strong> Below 1°C can cause cell membrane rupture</li>
+                        <li><strong>Patient Safety:</strong> Damaged blood products can harm patients</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Tooltip Container -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Scripts -->
+    <script src="js/dashboard.js"></script>
+    <script src="js/pid-tuning.js"></script>
+    <script src="js/control-theory.js"></script>
+    <script src="js/data-connector.js"></script>
+</body>
+</html>
