@@ -61,7 +61,7 @@ class DashboardServer:
     def initialize_control_system(self, blood_product_type='WHOLE_BLOOD'):
         """Initialize the thermal control system"""
         try:
-            print(f"🏥 Initializing control system for {blood_product_type}...")
+            print(f"Initializing control system for {blood_product_type}...")
             
             # Select blood product
             blood_products = {
@@ -84,11 +84,11 @@ class DashboardServer:
             result = self.control_system.start_system(initial_temperature=20.0)
             self.system_running = True
             
-            print(f"✅ Control system initialized: {result}")
+            print(f"Control system initialized: {result}")
             return True
             
         except Exception as e:
-            print(f"❌ Failed to initialize control system: {e}")
+            print(f"Failed to initialize control system: {e}")
             return False
     
     def setup_routes(self):
@@ -126,7 +126,7 @@ class DashboardServer:
                 return jsonify(enhanced_status)
                 
             except Exception as e:
-                print(f"❌ Error getting status: {e}")
+                print(f"Error getting status: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/initialize', methods=['POST'])
@@ -154,7 +154,7 @@ class DashboardServer:
                     }), 500
                     
             except Exception as e:
-                print(f"❌ Initialization error: {e}")
+                print(f"Initialization error: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/set_gains', methods=['POST'])
@@ -197,7 +197,7 @@ class DashboardServer:
                 })
                 
             except Exception as e:
-                print(f"❌ Error setting gains: {e}")
+                print(f"Error setting gains: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/set_target', methods=['POST'])
@@ -234,7 +234,7 @@ class DashboardServer:
                     return jsonify({'error': 'Failed to set temperature'}), 500
                     
             except Exception as e:
-                print(f"❌ Error setting target: {e}")
+                print(f"Error setting target: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/control_mode', methods=['POST'])
@@ -370,12 +370,12 @@ class DashboardServer:
         
         @self.socketio.on('connect')
         def handle_connect():
-            print('📡 Dashboard client connected')
+            print('Dashboard client connected')
             emit('connection_status', {'status': 'connected', 'system_running': self.system_running})
         
         @self.socketio.on('disconnect')
         def handle_disconnect():
-            print('📡 Dashboard client disconnected')
+            print('Dashboard client disconnected')
         
         @self.socketio.on('request_status')
         def handle_status_request():
@@ -414,7 +414,7 @@ class DashboardServer:
             return enhanced
             
         except Exception as e:
-            print(f"❌ Error enhancing status: {e}")
+            print(f"Error enhancing status: {e}")
             return status
     
     def assess_control_quality(self, error: float, pid_status: Dict) -> str:
@@ -544,7 +544,7 @@ class DashboardServer:
         }
         
         # In a real system, this would go to a database
-        print(f"📊 Educational Activity: {log_entry}")
+        print(f"Educational Activity: {log_entry}")
     
     def add_to_history(self, status: Dict[str, Any]):
         """Add status to history with size limiting"""
@@ -561,14 +561,14 @@ class DashboardServer:
         self.should_stop = False
         self.update_thread = threading.Thread(target=self.update_loop, daemon=True)
         self.update_thread.start()
-        print("🔄 Started real-time update thread")
+        print("Started real-time update thread")
     
     def stop_update_thread(self):
         """Stop the real-time update thread"""
         self.should_stop = True
         if self.update_thread:
             self.update_thread.join(timeout=2.0)
-        print("⏹️ Stopped real-time update thread")
+        print("Stopped real-time update thread")
     
     def update_loop(self):
         """Main update loop for real-time data"""
@@ -591,23 +591,23 @@ class DashboardServer:
                 time.sleep(1.0)  # Update every second
                 
             except Exception as e:
-                print(f"❌ Error in update loop: {e}")
+                print(f"Error in update loop: {e}")
                 time.sleep(5.0)  # Wait longer if there's an error
     
     def run(self, host='127.0.0.1', port=5000, debug=False):
         """Run the dashboard server"""
-        print(f"🚀 Starting Educational Dashboard Server...")
-        print(f"📍 Dashboard will be available at: http://{host}:{port}")
-        print(f"🎓 Educational features enabled")
-        print(f"🔧 Debug mode: {debug}")
+        print(f"Starting Educational Dashboard Server...")
+        print(f"Dashboard will be available at: http://{host}:{port}")
+        print(f"Educational features enabled")
+        print(f"Debug mode: {debug}")
         
         try:
             self.socketio.run(self.app, host=host, port=port, debug=debug)
         except KeyboardInterrupt:
-            print("\n⏹️ Shutting down server...")
+            print("\nShutting down server...")
             self.stop_update_thread()
         except Exception as e:
-            print(f"❌ Server error: {e}")
+            print(f"Server error: {e}")
         finally:
             if self.control_system and self.system_running:
                 self.control_system.stop_system()
