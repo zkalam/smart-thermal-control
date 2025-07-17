@@ -96,14 +96,89 @@ class ThermalControlDashboard {
     }
 
     startDataSimulation() {
-        // Simulate realistic thermal control system data
-        // This would normally connect to your Python control system
+        // Use real data connector instead of simulation
+        console.log('🔗 Connecting to real control system...');
         
-        console.log('🔄 Starting data simulation...');
+        // Set up data connector callbacks
+        if (window.dataConnector) {
+            window.dataConnector.onStatusUpdate((data) => {
+                this.handleRealSystemData(data);
+            });
+            
+            window.dataConnector.onConnectionChange((status) => {
+                this.handleConnectionChange(status);
+            });
+            
+            window.dataConnector.onError((error) => {
+                console.error('🔌 Data connector error:', error);
+            });
+        } else {
+            console.warn('⚠️ Data connector not available, falling back to simulation');
+            this.startSimulation();
+        }
+    }
+
+    handleRealSystemData(data) {
+        try {
+            // Update current data from real system
+            this.currentData.temperature = data.current_temperature_c || 4.0;
+            this.currentData.target = data.target_temperature_c || 4.0;
+            this.currentData.output = data.pid_controller?.last_output_w || 0;
+            this.currentData.safety_level = data.safety?.safety_level || 'SAFE';
+            this.currentData.alarm_count = data.safety?.active_alarms?.length || 0;
+            this.currentData.control_mode = data.control_mode || 'automatic';
+            
+            // Update PID terms if available
+            if (data.pid_controller) {
+                this.currentData.pid_terms.p = data.pid_controller.p_term || 0;
+                this.currentData.pid_terms.i = data.pid_controller.i_term || 0;
+                this.currentData.pid_terms.d = data.pid_controller.d_term || 0;
+            }
+            
+            // Calculate error
+            this.currentData.error = this.currentData.target - this.currentData.temperature;
+            
+            // Update educational context if available
+            if (data.educational_context) {
+                this.updateEducationalMetrics(data.educational_context);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error processing real system data:', error);
+        }
+    }
+
+    handleConnectionChange(status) {
+        const connectionIndicator = document.getElementById('connection-status');
+        if (connectionIndicator) {
+            connectionIndicator.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+            connectionIndicator.className = `connection-status ${status}`;
+        }
+        
+        if (status === 'disconnected') {
+            console.warn('⚠️ Lost connection to control system, falling back to simulation');
+            this.startSimulation();
+        }
+    }
+
+    updateEducationalMetrics(context) {
+        // Update educational content based on real system analysis
+        if (context.learning_opportunities && context.learning_opportunities.length > 0) {
+            this.currentLearningOpportunities = context.learning_opportunities;
+        }
+        
+        if (context.control_quality) {
+            this.currentControlQuality = context.control_quality;
+        }
+    }
+
+    startSimulation() {
+        // Fallback simulation for when real system is not available
+        console.log('🔄 Starting fallback data simulation...');
         
         setInterval(() => {
             this.simulateRealisticData();
-        }, 1000); // Update every second for smooth visualization
+        }, 1000);
     }
 
     simulateRealisticData() {

@@ -129,11 +129,28 @@ class PIDTuningLab {
     }
 
     updatePIDGain(parameter, value) {
-        // This would normally send the new gains to your Python control system
+        // Send the new gains to the real control system
         console.log(`🔧 Updated ${parameter.toUpperCase()}: ${value}`);
         
-        // For now, just trigger educational feedback
-        this.provideLearningFeedback(parameter, value);
+        // Get current gains
+        const gains = this.getCurrentGains();
+        
+        // Send to real system if available
+        if (window.dataConnector && window.dataConnector.isSystemReady()) {
+            window.dataConnector.setPIDGains(gains.kp, gains.ki, gains.kd)
+                .then(result => {
+                    console.log('✅ PID gains updated in real system');
+                    this.provideLearningFeedback(parameter, value);
+                })
+                .catch(error => {
+                    console.error('❌ Failed to update real system gains:', error);
+                    // Still provide educational feedback even if real system update fails
+                    this.provideLearningFeedback(parameter, value);
+                });
+        } else {
+            console.warn('⚠️ Real system not available, using simulation mode');
+            this.provideLearningFeedback(parameter, value);
+        }
         
         // Reset integral term when Ki changes to avoid windup during tuning
         if (parameter === 'ki' && window.dashboard) {

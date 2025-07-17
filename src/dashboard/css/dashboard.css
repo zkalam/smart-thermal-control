@@ -1,4 +1,6 @@
-/* Smart Thermal Control System - Educational Dashboard Styles */
+.connection-status {
+    padding: var(--space-sm) var(--space-md);
+    /* Smart Thermal Control System - Educational Dashboard Styles */
 
 /* CSS Variables for Medical Device Theme */
 :root {
@@ -121,6 +123,44 @@ body {
     background: rgba(255, 255, 255, 0.2);
     border-radius: var(--border-radius);
     font-size: 0.9rem;
+}
+
+.connection-status.connected {
+    background: var(--safe-green);
+    color: white;
+}
+
+.connection-status.disconnected {
+    background: var(--critical-red);
+    color: white;
+}
+
+.connection-status.partial {
+    background: var(--warning-yellow);
+    color: white;
+}
+
+.init-button {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--edu-primary);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.init-button:hover {
+    background: var(--edu-secondary);
+    transform: translateY(-1px);
+}
+
+.init-button:disabled {
+    background: var(--text-light);
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Dashboard Layout */
@@ -758,4 +798,6 @@ select:focus {
         color: black !important;
         border: 1px solid #000;
     }
+}
+
 }

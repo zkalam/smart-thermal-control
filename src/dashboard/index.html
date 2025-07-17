@@ -15,7 +15,8 @@
             <p class="subtitle">Interactive Control Systems Learning Platform</p>
             <div class="system-status">
                 <span class="status-indicator safe" id="safety-status">SAFE</span>
-                <span class="connection-status" id="connection-status">Connected</span>
+                <span class="connection-status" id="connection-status">Disconnected</span>
+                <button class="init-button" onclick="initializeSystemFromUI()">Initialize System</button>
             </div>
         </div>
     </header>
@@ -132,6 +133,16 @@
                 <div class="experiment-card" id="current-experiment">
                     <p><strong>Experiment 1:</strong> Increase Kp to 3.0 and observe what happens to the system response. Do you see overshoot?</p>
                     <button class="try-button" onclick="tryExperiment(1)">Try It!</button>
+                </div>
+                
+                <div class="experiment-controls">
+                    <h4>🎛️ Real System Controls:</h4>
+                    <div class="control-buttons">
+                        <button onclick="triggerDisturbanceFromUI(2.0)">🌪️ Door Opening (+2°C)</button>
+                        <button onclick="runExperimentFromUI('overshoot')">📈 Overshoot Demo</button>
+                        <button onclick="runExperimentFromUI('steady_state')">📍 Steady-State Demo</button>
+                        <button onclick="runExperimentFromUI('oscillation')">🌊 Oscillation Demo</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -277,6 +288,7 @@
     <div id="tooltip" class="tooltip"></div>
 
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/pid-tuning.js"></script>
     <script src="js/control-theory.js"></script>
