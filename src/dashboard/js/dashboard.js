@@ -1,6 +1,12 @@
 /**
- * Smart Thermal Control System - Educational Dashboard
- * Main dashboard coordination and initialization
+ * Enhanced Dashboard.js - Fixes for chart time display and responsiveness
+ * 
+ * CHANGES MADE:
+ * 1. Fixed target temperature simulation to use current slider value
+ * 2. Added faster data generation (500ms instead of 1000ms)
+ * 3. Enhanced slider event handling for real-time feedback
+ * 4. Improved chart data flow
+ * 5. Added proper time scale handling for chart
  */
 
 class ThermalControlDashboard {
@@ -18,7 +24,9 @@ class ThermalControlDashboard {
         };
         
         this.updateInterval = null;
+        this.simulationInterval = null; // Add separate simulation interval
         this.chartTimeScale = 60; // seconds
+        this.sliderTimeout = null; // For auto-setting after delay
         this.init();
     }
 
@@ -73,13 +81,55 @@ class ThermalControlDashboard {
             });
         });
 
-        // Target temperature slider
+        // Enhanced target temperature slider with real-time feedback
+        this.setupTargetSlider();
+    }
+
+    setupTargetSlider() {
         const targetSlider = document.getElementById('target-slider');
-        if (targetSlider) {
-            targetSlider.addEventListener('input', () => {
-                updateTargetSliderValue();
-            });
-        }
+        const targetDisplay = document.getElementById('target-temp');
+        
+        if (!targetSlider || !targetDisplay) return;
+
+        // Real-time update while dragging
+        targetSlider.addEventListener('input', (e) => {
+            const newTarget = parseFloat(e.target.value);
+            
+            // Update display immediately with visual feedback
+            targetDisplay.textContent = newTarget.toFixed(1);
+            targetDisplay.style.color = 'var(--edu-primary, #6366f1)';
+            targetDisplay.style.fontWeight = '800';
+            targetDisplay.style.textShadow = '0 0 8px rgba(99, 102, 241, 0.5)';
+            
+            // Update the actual target in simulation immediately
+            this.currentData.target = newTarget;
+            
+            console.log(`🎯 Target temperature slider moved to: ${newTarget}°C`);
+            
+            // Clear any existing timeout
+            if (this.sliderTimeout) {
+                clearTimeout(this.sliderTimeout);
+            }
+        });
+
+        // Handle slider release/change
+        targetSlider.addEventListener('change', (e) => {
+            const finalTarget = parseFloat(e.target.value);
+            
+            // Reset styling after a brief delay
+            setTimeout(() => {
+                targetDisplay.style.color = '';
+                targetDisplay.style.fontWeight = '';
+                targetDisplay.style.textShadow = '';
+            }, 500);
+            
+            console.log(`🎯 Slider released at: ${finalTarget}°C`);
+        });
+
+        // Initialize display with current slider value
+        const currentValue = parseFloat(targetSlider.value);
+        targetDisplay.textContent = currentValue.toFixed(1);
+        this.currentData.target = currentValue; // Make sure data matches slider
     }
 
     initializeTooltips() {
@@ -121,8 +171,8 @@ class ThermalControlDashboard {
                 console.error('🔌 Data connector error:', error);
             });
         } else {
-            console.warn('⚠️ Data connector not available, falling back to simulation');
-            this.startSimulation();
+            console.warn('⚠️ Data connector not available, falling back to enhanced simulation');
+            this.startEnhancedSimulation();
         }
     }
 
@@ -165,7 +215,7 @@ class ThermalControlDashboard {
         
         if (status === 'disconnected') {
             console.warn('⚠️ Lost connection to control system, falling back to simulation');
-            this.startSimulation();
+            this.startEnhancedSimulation();
         }
     }
 
@@ -181,34 +231,56 @@ class ThermalControlDashboard {
     }
 
     startSimulation() {
-        // Fallback simulation for when real system is not available
-        console.log('🔄 Starting fallback data simulation...');
+        // Legacy method - redirect to enhanced simulation
+        this.startEnhancedSimulation();
+    }
+
+    startEnhancedSimulation() {
+        // Enhanced simulation with faster updates for better responsiveness
+        console.log('🔄 Starting enhanced data simulation...');
         
-        setInterval(() => {
+        // Clear any existing simulation
+        if (this.simulationInterval) {
+            clearInterval(this.simulationInterval);
+        }
+        
+        // Generate data every 500ms instead of 1000ms for faster response
+        this.simulationInterval = setInterval(() => {
             this.simulateRealisticData();
-        }, 1000);
+        }, 500);
     }
 
     simulateRealisticData() {
-        // Simulate realistic PID control behavior
-        const time = Date.now() / 1000;
+        // Enhanced simulation with proper target tracking from slider
+        const dt = 0.5; // 500ms = 0.5 seconds
+        
+        // Get target from current slider value (this was the key fix!)
+        const slider = document.getElementById('target-slider');
+        if (slider) {
+            this.currentData.target = parseFloat(slider.value);
+        }
         
         // Add some realistic noise and trends
-        const noise = (Math.random() - 0.5) * 0.1;
-        const targetTemp = 4.0;
+        const noise = (Math.random() - 0.5) * 0.02; // Reduced noise for smoother display
         
         // Simulate PID response
-        this.currentData.error = targetTemp - this.currentData.temperature;
+        this.currentData.error = this.currentData.target - this.currentData.temperature;
         
-        // Simple PID simulation (this would come from your actual control system)
+        // Get current PID gains from sliders
         const kp = parseFloat(document.getElementById('kp-slider')?.value || 1.0);
         const ki = parseFloat(document.getElementById('ki-slider')?.value || 0.1);
         const kd = parseFloat(document.getElementById('kd-slider')?.value || 0.05);
         
+        // PID calculation with proper time step
         this.currentData.pid_terms.p = kp * this.currentData.error;
-        this.currentData.pid_terms.i += ki * this.currentData.error * 0.1; // dt = 0.1
-        this.currentData.pid_terms.d = kd * (this.currentData.error - (this.currentData.previousError || 0)) / 0.1;
         
+        // Integral term with windup protection
+        this.currentData.pid_terms.i += ki * this.currentData.error * dt;
+        this.currentData.pid_terms.i = Math.max(-50, Math.min(50, this.currentData.pid_terms.i));
+        
+        // Derivative term
+        const errorRate = (this.currentData.error - (this.currentData.previousError || 0)) / dt;
+        this.currentData.pid_terms.d = kd * errorRate;
         this.currentData.previousError = this.currentData.error;
         
         // Calculate total output
@@ -216,16 +288,26 @@ class ThermalControlDashboard {
                                  this.currentData.pid_terms.i + 
                                  this.currentData.pid_terms.d;
         
-        // Simulate temperature response (simplified thermal dynamics)
-        const thermalTimeConstant = 30; // seconds
-        const temperatureChange = this.currentData.output * 0.001 / thermalTimeConstant;
-        this.currentData.temperature += temperatureChange + noise;
+        // Limit output
+        this.currentData.output = Math.max(-100, Math.min(100, this.currentData.output));
+        
+        // Enhanced thermal system simulation
+        const thermalTimeConstant = 15; // Faster response for demonstration
+        const heatCapacity = 800;
+        const ambientTemp = 20; // Room temperature
+        const heatLoss = 0.03; // Heat loss coefficient
+        
+        // Temperature response with realistic thermal dynamics
+        const powerEffect = this.currentData.output * 0.0008 / heatCapacity * dt;
+        const ambientLoss = (this.currentData.temperature - ambientTemp) * heatLoss * dt;
+        
+        this.currentData.temperature += powerEffect - ambientLoss + noise;
         
         // Simulate safety monitoring
         this.updateSafetyStatus();
         
         // Clamp values for realism
-        this.currentData.temperature = Math.max(0, Math.min(50, this.currentData.temperature));
+        this.currentData.temperature = Math.max(-2, Math.min(15, this.currentData.temperature));
         this.currentData.output = Math.max(-100, Math.min(100, this.currentData.output));
     }
 
@@ -254,7 +336,15 @@ class ThermalControlDashboard {
     updateDisplay() {
         // Update system status values
         this.updateElement('current-temp', this.currentData.temperature.toFixed(1));
-        this.updateElement('target-temp', this.currentData.target.toFixed(1));
+        
+        // Only update target display if user isn't actively adjusting slider
+        const targetDisplay = document.getElementById('target-temp');
+        const slider = document.getElementById('target-slider');
+        if (targetDisplay && slider && !targetDisplay.style.color) {
+            // Only update if not currently being adjusted by user
+            this.updateElement('target-temp', this.currentData.target.toFixed(1));
+        }
+        
         this.updateElement('control-output', this.currentData.output.toFixed(0));
         this.updateElement('safety-level', this.currentData.safety_level);
         this.updateElement('alarm-count', this.currentData.alarm_count);
@@ -408,24 +498,47 @@ This ensures patient safety and blood product integrity!
         }
     }
 
-    // Public methods for external control
+    // Enhanced public methods for external control
     setTargetTemperature(temp) {
+        // Update internal data
+        this.currentData.target = temp;
+        
+        // Update slider to match
+        const slider = document.getElementById('target-slider');
+        if (slider) {
+            slider.value = temp;
+        }
+        
+        // Show visual feedback
+        this.showTargetSetFeedback(temp);
+        
         // Send to real system if available
         if (window.dataConnector && window.dataConnector.isSystemReady()) {
             window.dataConnector.setTargetTemperature(temp)
                 .then(result => {
                     console.log('Target temperature updated in real system');
-                    this.currentData.target = temp;
-                    this.updateElement('target-temp', temp.toFixed(1));
                 })
                 .catch(error => {
                     console.error('Failed to update target temperature:', error);
                 });
-        } else {
-            // Fallback for simulation mode
-            this.currentData.target = temp;
-            this.updateElement('target-temp', temp.toFixed(1));
         }
+    }
+
+    showTargetSetFeedback(temperature) {
+        // Visual feedback when target is successfully set
+        const targetDisplay = document.getElementById('target-temp');
+        if (targetDisplay) {
+            targetDisplay.style.color = 'var(--safe-green, #10b981)';
+            targetDisplay.style.fontWeight = '800';
+            targetDisplay.textContent = temperature.toFixed(1);
+            
+            setTimeout(() => {
+                targetDisplay.style.color = '';
+                targetDisplay.style.fontWeight = '';
+            }, 1000);
+        }
+        
+        console.log(`✅ Target temperature set to: ${temperature.toFixed(1)}°C`);
     }
 
     triggerDisturbance(magnitude = 2.0) {
@@ -439,12 +552,22 @@ This ensures patient safety and blood product integrity!
         this.currentData.target = 4.0;
         this.currentData.output = 0;
         this.currentData.pid_terms = { p: 0, i: 0, d: 0 };
+        
+        // Reset slider
+        const slider = document.getElementById('target-slider');
+        if (slider) slider.value = 4.0;
+        
         console.log('🔄 System reset to initial conditions');
     }
 }
 
-// Global functions for UI interactions
+// Enhanced global functions for UI interactions
 function adjustTimeScale(seconds) {
+    // Update chart time window directly
+    if (window.temperatureChart) {
+        window.temperatureChart.setTimeWindow(seconds);
+    }
+    
     if (window.dashboard) {
         window.dashboard.chartTimeScale = seconds;
     }
@@ -465,9 +588,9 @@ function clearChart() {
     console.log('🗑️ Chart data cleared');
 }
 
-function triggerDisturbance() {
+function triggerDisturbanceFromUI(magnitude = 2.0) {
     if (window.dashboard) {
-        window.dashboard.triggerDisturbance();
+        window.dashboard.triggerDisturbance(magnitude);
     }
 }
 
@@ -487,12 +610,43 @@ function setTargetFromSlider() {
 }
 
 function updateTargetSliderValue() {
+    // This is now handled by setupTargetSlider() but keeping for compatibility
     const slider = document.getElementById('target-slider');
     const display = document.getElementById('target-temp');
     
     if (slider && display) {
         display.textContent = parseFloat(slider.value).toFixed(1);
     }
+}
+
+// Enhanced initialization
+function initializeSystemFromUI() {
+    const initButton = document.querySelector('.init-button');
+    if (initButton) {
+        initButton.textContent = 'Initializing...';
+        initButton.disabled = true;
+    }
+    
+    setTimeout(() => {
+        if (window.dashboard) {
+            // Start enhanced simulation
+            window.dashboard.startEnhancedSimulation();
+            
+            // Update connection status
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                connectionStatus.textContent = 'Simulating';
+                connectionStatus.className = 'connection-status partial';
+            }
+        }
+        
+        if (initButton) {
+            initButton.textContent = 'System Active';
+            initButton.disabled = false;
+        }
+        
+        console.log('✅ System initialized with enhanced simulation');
+    }, 1000);
 }
 
 // Initialize dashboard when page loads
