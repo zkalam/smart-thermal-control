@@ -602,7 +602,13 @@ class DashboardServer:
         print(f"Debug mode: {debug}")
         
         try:
-            self.socketio.run(self.app, host=host, port=port, debug=debug)
+            self.socketio.run(
+                self.app, 
+                host=host, 
+                port=port, 
+                debug=debug,
+                allow_unsafe_werkzeug=True  # For development only
+            )
         except KeyboardInterrupt:
             print("\nShutting down server...")
             self.stop_update_thread()
