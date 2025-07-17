@@ -16,11 +16,14 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
-# Add parent directory to path to import control system modules
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add the project root to Python path for absolute imports
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from ..control.control_interface import create_blood_storage_control_system, ControlMode
-from ..thermal_model.heat_transfer_data import MaterialLibrary
+# Now import with absolute paths
+from src.control.control_interface import create_blood_storage_control_system, ControlMode
+from src.thermal_model.heat_transfer_data import MaterialLibrary
 
 class DashboardServer:
     """Educational Dashboard Server integrating with thermal control system"""
@@ -178,7 +181,7 @@ class DashboardServer:
                     }), 400
                 
                 # Set gains in control system
-                from ..control.pid_controller import PIDGains
+                from src.control.pid_controller import PIDGains
                 gains = PIDGains(kp=kp, ki=ki, kd=kd)
                 self.control_system.pid_controller.set_gains(gains)
                 
@@ -471,7 +474,7 @@ class DashboardServer:
     
     def experiment_overshoot(self) -> Dict[str, Any]:
         """Demonstrate overshoot with high Kp"""
-        from ..control.pid_controller import PIDGains
+        from src.control.pid_controller import PIDGains
         
         # Set aggressive gains
         gains = PIDGains(kp=4.0, ki=0.1, kd=0.0)
@@ -491,7 +494,7 @@ class DashboardServer:
     
     def experiment_steady_state(self) -> Dict[str, Any]:
         """Demonstrate steady-state error with Ki=0"""
-        from ..control.pid_controller import PIDGains
+        from src.control.pid_controller import PIDGains
         
         # Set P-only control
         gains = PIDGains(kp=1.0, ki=0.0, kd=0.05)
@@ -506,7 +509,7 @@ class DashboardServer:
     
     def experiment_oscillation(self) -> Dict[str, Any]:
         """Demonstrate oscillation with excessive gains"""
-        from ..control.pid_controller import PIDGains
+        from src.control.pid_controller import PIDGains
         
         # Set unstable gains
         gains = PIDGains(kp=5.0, ki=0.8, kd=0.0)
