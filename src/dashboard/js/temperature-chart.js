@@ -1,697 +1,496 @@
 /**
- * Real-Time Temperature Chart
- * Educational visualization component for temperature control
+ * Enhanced Temperature Chart - Better Time Management and Responsiveness
+ * Fixes: 1) Limited time display, 2) Slow response issues
  */
 
 class TemperatureChart {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.error(`Canvas ${canvasId} not found`);
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
+        this.data = [];
+        this.maxDataPoints = 1000; // Increased from default
+        this.timeWindow = 60; // Default 1 minute window (in seconds)
+        this.isRunning = true;
         
-        // Chart configuration
-        this.config = {
-            maxDataPoints: 300,
-            timeWindow: 60, // seconds
-            updateInterval: 100, // ms
-            
-            // Display options
-            showSetpoint: true,
-            showError: true,
-            showOutput: true,
-            
-            // Visual styling
-            backgroundColor: '#ffffff',
-            gridColor: '#e5e7eb',
-            textColor: '#374151',
-            
-            // Line colors
-            temperatureColor: '#ef4444',
-            setpointColor: '#10b981',
-            errorColor: '#f59e0b',
-            outputColor: '#3b82f6'
-        };
+        // Chart display options
+        this.showSetpoint = true;
+        this.showError = true;
+        this.showOutput = true;
         
-        // Data storage
-        this.data = {
-            temperature: [],
-            setpoint: [],
-            error: [],
-            output: [],
-            timestamps: []
-        };
-        
-        // Chart dimensions
-        this.margins = { top: 40, right: 80, bottom: 40, left: 60 };
-        this.chartArea = {
-            x: this.margins.left,
-            y: this.margins.top,
-            width: this.canvas.width - this.margins.left - this.margins.right,
-            height: this.canvas.height - this.margins.top - this.margins.bottom
+        // Colors for dark theme
+        this.colors = {
+            temperature: '#ef4444',    // Red
+            setpoint: '#10b981',       // Green  
+            error: '#f59e0b',         // Orange
+            output: '#3b82f6',        // Blue
+            grid: '#334155',          // Dark gray
+            text: '#94a3b8',          // Light gray
+            background: '#1e293b'     // Dark background
         };
         
         this.init();
     }
-
+    
     init() {
-        console.log('📊 Initializing Temperature Chart...');
+        console.log('📊 Initializing Enhanced Temperature Chart...');
         
         // Set up canvas
         this.setupCanvas();
         
-        // Start drawing loop
-        this.startDrawLoop();
+        // Start the animation loop
+        this.startAnimationLoop();
         
-        console.log('✅ Temperature Chart ready!');
+        // Set up event listeners
+        this.setupEventListeners();
+        
+        console.log('✅ Temperature Chart initialized!');
     }
-
+    
     setupCanvas() {
-        // Handle high DPI displays
-        const devicePixelRatio = window.devicePixelRatio || 1;
+        // Set canvas size for better resolution
         const rect = this.canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
         
-        this.canvas.width = rect.width * devicePixelRatio;
-        this.canvas.height = rect.height * devicePixelRatio;
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        
+        this.ctx.scale(dpr, dpr);
+        
+        // Set canvas display size
         this.canvas.style.width = rect.width + 'px';
         this.canvas.style.height = rect.height + 'px';
-        
-        this.ctx.scale(devicePixelRatio, devicePixelRatio);
-        
-        // Update chart area for new dimensions
-        this.chartArea = {
-            x: this.margins.left,
-            y: this.margins.top,
-            width: rect.width - this.margins.left - this.margins.right,
-            height: rect.height - this.margins.top - this.margins.bottom
-        };
     }
-
+    
+    setupEventListeners() {
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.setupCanvas();
+        });
+        
+        // Chart control buttons
+        document.getElementById('show-setpoint')?.addEventListener('change', (e) => {
+            this.showSetpoint = e.target.checked;
+        });
+        
+        document.getElementById('show-error')?.addEventListener('change', (e) => {
+            this.showError = e.target.checked;
+        });
+        
+        document.getElementById('show-output')?.addEventListener('change', (e) => {
+            this.showOutput = e.target.checked;
+        });
+    }
+    
     addDataPoint(dataPoint) {
-        const now = Date.now();
-        
-        // Add new data
-        this.data.timestamps.push(now);
-        this.data.temperature.push(dataPoint.temperature);
-        this.data.setpoint.push(dataPoint.target);
-        this.data.error.push(dataPoint.error);
-        this.data.output.push(dataPoint.output);
-        
-        // Remove old data to maintain window size
-        const cutoffTime = now - (this.config.timeWindow * 1000);
-        this.removeOldData(cutoffTime);
-    }
-
-    removeOldData(cutoffTime) {
-        while (this.data.timestamps.length > 0 && this.data.timestamps[0] < cutoffTime) {
-            this.data.timestamps.shift();
-            this.data.temperature.shift();
-            this.data.setpoint.shift();
-            this.data.error.shift();
-            this.data.output.shift();
-        }
-        
-        // Also enforce max data points limit
-        while (this.data.timestamps.length > this.config.maxDataPoints) {
-            this.data.timestamps.shift();
-            this.data.temperature.shift();
-            this.data.setpoint.shift();
-            this.data.error.shift();
-            this.data.output.shift();
-        }
-    }
-
-    startDrawLoop() {
-        const draw = () => {
-            this.draw();
-            requestAnimationFrame(draw);
+        // Enhanced data point with timestamp
+        const point = {
+            time: dataPoint.time || Date.now(),
+            temperature: dataPoint.temperature || 0,
+            target: dataPoint.target || 0,
+            error: dataPoint.error || 0,
+            output: dataPoint.output || 0
         };
-        draw();
+        
+        this.data.push(point);
+        
+        // Remove old data points beyond our time window and max points
+        const cutoffTime = Date.now() - (this.timeWindow * 1000);
+        this.data = this.data.filter(p => p.time > cutoffTime);
+        
+        // Also limit by max points for performance
+        if (this.data.length > this.maxDataPoints) {
+            this.data = this.data.slice(-this.maxDataPoints);
+        }
+        
+        // Force a redraw
+        this.needsRedraw = true;
     }
-
+    
+    startAnimationLoop() {
+        const animate = () => {
+            if (this.isRunning) {
+                this.draw();
+                requestAnimationFrame(animate);
+            }
+        };
+        animate();
+    }
+    
     draw() {
+        if (!this.ctx) return;
+        
+        const width = this.canvas.clientWidth;
+        const height = this.canvas.clientHeight;
+        
         // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = this.colors.background;
+        this.ctx.fillRect(0, 0, width, height);
         
-        // Fill background
-        this.ctx.fillStyle = this.config.backgroundColor;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        if (this.data.timestamps.length < 2) {
-            this.drawEmptyState();
+        if (this.data.length < 2) {
+            this.drawNoDataMessage(width, height);
             return;
         }
         
-        // Draw chart elements
-        this.drawGrid();
-        this.drawAxes();
+        // Calculate chart area (leave space for labels)
+        const padding = { top: 40, right: 80, bottom: 60, left: 80 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+        
+        // Calculate time and value ranges
+        const timeRange = this.calculateTimeRange();
+        const valueRange = this.calculateValueRange();
+        
+        // Draw grid
+        this.drawGrid(padding, chartWidth, chartHeight, timeRange, valueRange);
         
         // Draw data lines
-        if (this.config.showSetpoint) this.drawLine('setpoint', this.config.setpointColor, 2);
-        if (this.config.showOutput) this.drawOutputBars();
-        this.drawLine('temperature', this.config.temperatureColor, 3);
-        if (this.config.showError) this.drawLine('error', this.config.errorColor, 2, true);
+        if (this.showSetpoint) {
+            this.drawLine('target', padding, chartWidth, chartHeight, timeRange, valueRange, this.colors.setpoint, 2);
+        }
         
-        // Draw legend and labels
-        this.drawLegend();
-        this.drawLabels();
-        this.drawEducationalAnnotations();
+        this.drawLine('temperature', padding, chartWidth, chartHeight, timeRange, valueRange, this.colors.temperature, 3);
+        
+        if (this.showError) {
+            this.drawLine('error', padding, chartWidth, chartHeight, timeRange, valueRange, this.colors.error, 2);
+        }
+        
+        if (this.showOutput) {
+            this.drawOutputLine(padding, chartWidth, chartHeight, timeRange, valueRange);
+        }
+        
+        // Draw legend
+        this.drawLegend(width, height);
+        
+        // Draw current values box
+        this.drawCurrentValues(padding);
     }
-
-    drawGrid() {
-        this.ctx.strokeStyle = this.config.gridColor;
+    
+    calculateTimeRange() {
+        if (this.data.length === 0) return { min: 0, max: 1000 };
+        
+        const now = Date.now();
+        const timeWindow = this.timeWindow * 1000; // Convert to milliseconds
+        
+        return {
+            min: now - timeWindow,
+            max: now
+        };
+    }
+    
+    calculateValueRange() {
+        if (this.data.length === 0) {
+            return { min: 0, max: 10 };
+        }
+        
+        let minTemp = Infinity;
+        let maxTemp = -Infinity;
+        let minOutput = Infinity;
+        let maxOutput = -Infinity;
+        
+        // Filter data to current time window
+        const cutoffTime = Date.now() - (this.timeWindow * 1000);
+        const visibleData = this.data.filter(p => p.time > cutoffTime);
+        
+        visibleData.forEach(point => {
+            minTemp = Math.min(minTemp, point.temperature, point.target);
+            maxTemp = Math.max(maxTemp, point.temperature, point.target);
+            
+            if (this.showError) {
+                minTemp = Math.min(minTemp, point.error);
+                maxTemp = Math.max(maxTemp, point.error);
+            }
+            
+            if (this.showOutput) {
+                minOutput = Math.min(minOutput, point.output);
+                maxOutput = Math.max(maxOutput, point.output);
+            }
+        });
+        
+        // Add some padding to the range
+        const tempPadding = (maxTemp - minTemp) * 0.1 || 1;
+        
+        return {
+            minTemp: minTemp - tempPadding,
+            maxTemp: maxTemp + tempPadding,
+            minOutput: minOutput,
+            maxOutput: maxOutput
+        };
+    }
+    
+    drawGrid(padding, chartWidth, chartHeight, timeRange, valueRange) {
+        this.ctx.strokeStyle = this.colors.grid;
         this.ctx.lineWidth = 1;
-        this.ctx.setLineDash([2, 2]);
+        this.ctx.font = '12px Inter, sans-serif';
+        this.ctx.fillStyle = this.colors.text;
         
         // Vertical grid lines (time)
-        const timeSpan = this.config.timeWindow * 1000;
-        const gridInterval = timeSpan / 6; // 6 vertical lines
-        
+        const timeStep = (timeRange.max - timeRange.min) / 6;
         for (let i = 0; i <= 6; i++) {
-            const x = this.chartArea.x + (i * this.chartArea.width / 6);
+            const time = timeRange.min + (i * timeStep);
+            const x = padding.left + (i * chartWidth / 6);
+            
+            // Draw line
             this.ctx.beginPath();
-            this.ctx.moveTo(x, this.chartArea.y);
-            this.ctx.lineTo(x, this.chartArea.y + this.chartArea.height);
+            this.ctx.moveTo(x, padding.top);
+            this.ctx.lineTo(x, padding.top + chartHeight);
             this.ctx.stroke();
+            
+            // Draw label
+            const secondsAgo = Math.round((Date.now() - time) / 1000);
+            const label = secondsAgo === 0 ? '0s' : `-${secondsAgo}s`;
+            this.ctx.fillText(label, x - 15, padding.top + chartHeight + 20);
         }
         
         // Horizontal grid lines (temperature)
+        const tempStep = (valueRange.maxTemp - valueRange.minTemp) / 5;
         for (let i = 0; i <= 5; i++) {
-            const y = this.chartArea.y + (i * this.chartArea.height / 5);
+            const temp = valueRange.minTemp + (i * tempStep);
+            const y = padding.top + chartHeight - (i * chartHeight / 5);
+            
+            // Draw line
             this.ctx.beginPath();
-            this.ctx.moveTo(this.chartArea.x, y);
-            this.ctx.lineTo(this.chartArea.x + this.chartArea.width, y);
+            this.ctx.moveTo(padding.left, y);
+            this.ctx.lineTo(padding.left + chartWidth, y);
             this.ctx.stroke();
-        }
-        
-        this.ctx.setLineDash([]);
-    }
-
-    drawAxes() {
-        this.ctx.strokeStyle = this.config.textColor;
-        this.ctx.lineWidth = 2;
-        
-        // Y-axis
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.chartArea.x, this.chartArea.y);
-        this.ctx.lineTo(this.chartArea.x, this.chartArea.y + this.chartArea.height);
-        this.ctx.stroke();
-        
-        // X-axis
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.chartArea.x, this.chartArea.y + this.chartArea.height);
-        this.ctx.lineTo(this.chartArea.x + this.chartArea.width, this.chartArea.y + this.chartArea.height);
-        this.ctx.stroke();
-        
-        // Y-axis labels (temperature)
-        this.ctx.fillStyle = this.config.textColor;
-        this.ctx.font = '12px sans-serif';
-        this.ctx.textAlign = 'right';
-        this.ctx.textBaseline = 'middle';
-        
-        const tempRange = this.getTemperatureRange();
-        for (let i = 0; i <= 5; i++) {
-            const temp = tempRange.min + (i * (tempRange.max - tempRange.min) / 5);
-            const y = this.chartArea.y + this.chartArea.height - (i * this.chartArea.height / 5);
-            this.ctx.fillText(temp.toFixed(1) + '°C', this.chartArea.x - 10, y);
-        }
-        
-        // X-axis labels (time)
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'top';
-        
-        for (let i = 0; i <= 6; i++) {
-            const secondsAgo = (6 - i) * this.config.timeWindow / 6;
-            const x = this.chartArea.x + (i * this.chartArea.width / 6);
-            this.ctx.fillText(`-${secondsAgo.toFixed(0)}s`, x, this.chartArea.y + this.chartArea.height + 5);
+            
+            // Draw label
+            this.ctx.fillText(temp.toFixed(1) + '°C', 5, y + 5);
         }
     }
-
-    drawLine(dataKey, color, lineWidth, isError = false) {
-        if (this.data[dataKey].length < 2) return;
+    
+    drawLine(dataKey, padding, chartWidth, chartHeight, timeRange, valueRange, color, lineWidth = 2) {
+        const cutoffTime = Date.now() - (this.timeWindow * 1000);
+        const visibleData = this.data.filter(p => p.time > cutoffTime);
+        
+        if (visibleData.length < 2) return;
         
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = lineWidth;
-        this.ctx.setLineDash([]);
-        
-        const range = isError ? this.getErrorRange() : this.getTemperatureRange();
-        const now = Date.now();
-        const timeSpan = this.config.timeWindow * 1000;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
         
         this.ctx.beginPath();
         
-        for (let i = 0; i < this.data[dataKey].length; i++) {
-            const value = this.data[dataKey][i];
-            const timestamp = this.data.timestamps[i];
+        visibleData.forEach((point, index) => {
+            const x = padding.left + ((point.time - timeRange.min) / (timeRange.max - timeRange.min)) * chartWidth;
+            const y = padding.top + chartHeight - ((point[dataKey] - valueRange.minTemp) / (valueRange.maxTemp - valueRange.minTemp)) * chartHeight;
             
-            const x = this.chartArea.x + ((now - timestamp) / timeSpan) * this.chartArea.width;
-            const x_pos = this.chartArea.x + this.chartArea.width - x + this.chartArea.x;
-            
-            let y;
-            if (isError) {
-                // Center error around middle of chart
-                const errorCenter = this.chartArea.y + this.chartArea.height / 2;
-                y = errorCenter - (value / (range.max - range.min)) * this.chartArea.height / 4;
+            if (index === 0) {
+                this.ctx.moveTo(x, y);
             } else {
-                y = this.chartArea.y + this.chartArea.height - 
-                    ((value - range.min) / (range.max - range.min)) * this.chartArea.height;
+                this.ctx.lineTo(x, y);
             }
-            
-            if (i === 0) {
-                this.ctx.moveTo(x_pos, y);
-            } else {
-                this.ctx.lineTo(x_pos, y);
-            }
-        }
+        });
         
         this.ctx.stroke();
     }
-
-    drawOutputBars() {
-        if (this.data.output.length === 0) return;
+    
+    drawOutputLine(padding, chartWidth, chartHeight, timeRange, valueRange) {
+        const cutoffTime = Date.now() - (this.timeWindow * 1000);
+        const visibleData = this.data.filter(p => p.time > cutoffTime);
         
-        this.ctx.fillStyle = this.config.outputColor + '40'; // Semi-transparent
+        if (visibleData.length < 2) return;
         
-        const now = Date.now();
-        const timeSpan = this.config.timeWindow * 1000;
-        const outputRange = this.getOutputRange();
-        const zeroY = this.chartArea.y + this.chartArea.height / 2;
+        // Scale output to fit in the chart (secondary axis)
+        const outputScale = chartHeight * 0.3; // Use bottom 30% of chart
         
-        for (let i = 0; i < this.data.output.length; i++) {
-            const value = this.data.output[i];
-            const timestamp = this.data.timestamps[i];
+        this.ctx.strokeStyle = this.colors.output;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.7; // Make it semi-transparent
+        
+        this.ctx.beginPath();
+        
+        visibleData.forEach((point, index) => {
+            const x = padding.left + ((point.time - timeRange.min) / (timeRange.max - timeRange.min)) * chartWidth;
             
-            const x = this.chartArea.x + ((now - timestamp) / timeSpan) * this.chartArea.width;
-            const x_pos = this.chartArea.x + this.chartArea.width - x + this.chartArea.x;
+            // Scale output value to chart coordinates
+            const outputRange = valueRange.maxOutput - valueRange.minOutput || 100;
+            const normalizedOutput = (point.output - valueRange.minOutput) / outputRange;
+            const y = padding.top + chartHeight - (normalizedOutput * outputScale);
             
-            const barHeight = Math.abs(value) / Math.max(Math.abs(outputRange.max), Math.abs(outputRange.min)) * this.chartArea.height / 4;
-            const barY = value >= 0 ? zeroY - barHeight : zeroY;
-            
-            this.ctx.fillRect(x_pos - 1, barY, 2, Math.abs(barHeight));
-        }
+            if (index === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        });
+        
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0; // Reset alpha
     }
-
-    drawLegend() {
-        const legendX = this.chartArea.x + this.chartArea.width + 10;
-        let legendY = this.chartArea.y + 20;
+    
+    drawLegend(width, height) {
+        const legendX = width - 120;
+        const legendY = 20;
         
-        this.ctx.font = '12px sans-serif';
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'middle';
+        this.ctx.font = '12px Inter, sans-serif';
         
-        const legendItems = [
-            { label: 'Temperature', color: this.config.temperatureColor, show: true },
-            { label: 'Setpoint', color: this.config.setpointColor, show: this.config.showSetpoint },
-            { label: 'Error', color: this.config.errorColor, show: this.config.showError },
-            { label: 'Output', color: this.config.outputColor, show: this.config.showOutput }
+        const items = [
+            { name: 'Temperature', color: this.colors.temperature, show: true },
+            { name: 'Setpoint', color: this.colors.setpoint, show: this.showSetpoint },
+            { name: 'Error', color: this.colors.error, show: this.showError },
+            { name: 'Output', color: this.colors.output, show: this.showOutput }
         ];
         
-        legendItems.forEach(item => {
+        items.forEach((item, index) => {
             if (!item.show) return;
+            
+            const y = legendY + (index * 20);
             
             // Draw color indicator
             this.ctx.fillStyle = item.color;
-            this.ctx.fillRect(legendX, legendY - 4, 12, 8);
+            this.ctx.fillRect(legendX, y - 5, 15, 3);
             
-            // Draw label
-            this.ctx.fillStyle = this.config.textColor;
-            this.ctx.fillText(item.label, legendX + 18, legendY);
-            
-            legendY += 20;
+            // Draw text
+            this.ctx.fillStyle = this.colors.text;
+            this.ctx.fillText(item.name, legendX + 20, y);
         });
     }
-
-    drawLabels() {
-        // Chart title
-        this.ctx.font = 'bold 16px sans-serif';
-        this.ctx.fillStyle = this.config.textColor;
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'top';
-        this.ctx.fillText('Real-Time System Response', 
-                         this.chartArea.x + this.chartArea.width / 2, 10);
+    
+    drawCurrentValues(padding) {
+        if (this.data.length === 0) return;
         
-        // Y-axis label
-        this.ctx.save();
-        this.ctx.translate(15, this.chartArea.y + this.chartArea.height / 2);
-        this.ctx.rotate(-Math.PI / 2);
-        this.ctx.font = '14px sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Temperature (°C)', 0, 0);
-        this.ctx.restore();
-        
-        // X-axis label
-        this.ctx.font = '14px sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'bottom';
-        this.ctx.fillText('Time (seconds ago)', 
-                         this.chartArea.x + this.chartArea.width / 2, 
-                         this.canvas.height - 5);
-    }
-
-    drawEducationalAnnotations() {
-        if (this.data.temperature.length === 0) return;
-        
-        // Current values box
-        const currentTemp = this.data.temperature[this.data.temperature.length - 1];
-        const currentTarget = this.data.setpoint[this.data.setpoint.length - 1];
-        const currentError = this.data.error[this.data.error.length - 1];
-        
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        this.ctx.strokeStyle = this.config.textColor;
-        this.ctx.lineWidth = 1;
-        
-        const boxX = this.chartArea.x + 10;
-        const boxY = this.chartArea.y + 10;
+        const latest = this.data[this.data.length - 1];
+        const boxX = padding.left + 10;
+        const boxY = padding.top + 10;
         const boxWidth = 200;
         const boxHeight = 80;
         
+        // Draw background
+        this.ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
         this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // Draw border
+        this.ctx.strokeStyle = this.colors.grid;
+        this.ctx.lineWidth = 1;
         this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
         
-        // Current values text
-        this.ctx.fillStyle = this.config.textColor;
-        this.ctx.font = '12px sans-serif';
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'top';
+        // Draw text
+        this.ctx.font = 'bold 12px Inter, sans-serif';
+        this.ctx.fillStyle = this.colors.text;
         
-        this.ctx.fillText(`Current: ${currentTemp.toFixed(2)}°C`, boxX + 10, boxY + 10);
-        this.ctx.fillText(`Target: ${currentTarget.toFixed(2)}°C`, boxX + 10, boxY + 25);
-        this.ctx.fillText(`Error: ${currentError.toFixed(2)}°C`, boxX + 10, boxY + 40);
+        const textX = boxX + 10;
+        let textY = boxY + 20;
+        
+        this.ctx.fillText(`Current: ${latest.temperature.toFixed(2)}°C`, textX, textY);
+        textY += 15;
+        this.ctx.fillText(`Target: ${latest.target.toFixed(2)}°C`, textX, textY);
+        textY += 15;
+        this.ctx.fillText(`Error: ${latest.error.toFixed(2)}°C`, textX, textY);
         
         // Performance indicator
-        const performance = Math.abs(currentError) < 0.1 ? 'Excellent' : 
-                           Math.abs(currentError) < 0.5 ? 'Good' : 'Needs Adjustment';
-        const perfColor = Math.abs(currentError) < 0.1 ? '#10b981' : 
-                         Math.abs(currentError) < 0.5 ? '#f59e0b' : '#ef4444';
+        const errorMagnitude = Math.abs(latest.error);
+        let performance = 'Excellent';
+        let perfColor = this.colors.setpoint;
         
+        if (errorMagnitude > 0.5) {
+            performance = 'Needs Adjustment';
+            perfColor = this.colors.error;
+        } else if (errorMagnitude > 0.2) {
+            performance = 'Good';
+            perfColor = this.colors.temperature;
+        }
+        
+        textY += 15;
         this.ctx.fillStyle = perfColor;
-        this.ctx.fillText(`Performance: ${performance}`, boxX + 10, boxY + 55);
+        this.ctx.fillText(`Performance: ${performance}`, textX, textY);
     }
-
-    drawEmptyState() {
-        this.ctx.fillStyle = this.config.textColor;
-        this.ctx.font = '16px sans-serif';
+    
+    drawNoDataMessage(width, height) {
+        this.ctx.font = '16px Inter, sans-serif';
+        this.ctx.fillStyle = this.colors.text;
         this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('Waiting for data...', 
-                         this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.fillText('Waiting for data...', width / 2, height / 2);
+        this.ctx.textAlign = 'left';
     }
-
-    getTemperatureRange() {
-        if (this.data.temperature.length === 0) return { min: 0, max: 10 };
-        
-        const allTemps = [...this.data.temperature, ...this.data.setpoint];
-        const min = Math.min(...allTemps);
-        const max = Math.max(...allTemps);
-        const padding = (max - min) * 0.1 || 1;
-        
-        return { 
-            min: min - padding, 
-            max: max + padding 
-        };
-    }
-
-    getErrorRange() {
-        if (this.data.error.length === 0) return { min: -1, max: 1 };
-        
-        const maxError = Math.max(...this.data.error.map(Math.abs));
-        return { min: -maxError, max: maxError };
-    }
-
-    getOutputRange() {
-        if (this.data.output.length === 0) return { min: -100, max: 100 };
-        
-        const min = Math.min(...this.data.output);
-        const max = Math.max(...this.data.output);
-        
-        return { min, max };
-    }
-
-    // Public API methods
-    toggleSetpoint(show) {
-        this.config.showSetpoint = show;
-        console.log(`📊 Setpoint display: ${show ? 'ON' : 'OFF'}`);
-    }
-
-    toggleError(show) {
-        this.config.showError = show;
-        console.log(`📊 Error display: ${show ? 'ON' : 'OFF'}`);
-    }
-
-    toggleOutput(show) {
-        this.config.showOutput = show;
-        console.log(`📊 Output display: ${show ? 'ON' : 'OFF'}`);
-    }
-
+    
+    // Public methods for external control
     setTimeWindow(seconds) {
-        this.config.timeWindow = seconds;
-        console.log(`📊 Time window: ${seconds} seconds`);
+        this.timeWindow = Math.max(10, Math.min(600, seconds)); // Limit between 10s and 10min
+        console.log(`📊 Chart time window set to ${this.timeWindow} seconds`);
+        
+        // Update active button styling
+        document.querySelectorAll('.time-controls button').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.includes(seconds + 's') || 
+                (seconds === 60 && btn.textContent.includes('1m')) ||
+                (seconds === 300 && btn.textContent.includes('5m'))) {
+                btn.classList.add('active');
+            }
+        });
     }
-
+    
+    toggleSetpoint(show) {
+        this.showSetpoint = show;
+    }
+    
+    toggleError(show) {
+        this.showError = show;
+    }
+    
+    toggleOutput(show) {
+        this.showOutput = show;
+    }
+    
     clear() {
-        this.data = {
-            temperature: [],
-            setpoint: [],
-            error: [],
-            output: [],
-            timestamps: []
-        };
-        console.log('📊 Chart data cleared');
+        this.data = [];
+        console.log('🗑️ Chart data cleared');
     }
-
+    
     resize() {
         this.setupCanvas();
-        console.log('📊 Chart resized');
     }
-
-    // Educational methods
-    highlightFeature(feature) {
-        // Temporarily highlight specific chart features for educational purposes
-        switch(feature) {
-            case 'overshoot':
-                this.drawOvershootAnnotation();
-                break;
-            case 'steady-state':
-                this.drawSteadyStateAnnotation();
-                break;
-            case 'oscillation':
-                this.drawOscillationAnnotation();
-                break;
-        }
+    
+    stop() {
+        this.isRunning = false;
     }
-
-    drawOvershootAnnotation() {
-        // Find and highlight overshoot in temperature data
-        if (this.data.temperature.length < 10) return;
-        
-        const recentData = this.data.temperature.slice(-30);
-        const maxTemp = Math.max(...recentData);
-        const targetTemp = this.data.setpoint[this.data.setpoint.length - 1];
-        
-        if (maxTemp > targetTemp + 0.2) {
-            // Draw overshoot annotation
-            this.ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-            this.ctx.strokeStyle = '#ef4444';
-            this.ctx.lineWidth = 2;
-            this.ctx.setLineDash([5, 5]);
-            
-            // Draw annotation box
-            const boxX = this.chartArea.x + this.chartArea.width * 0.7;
-            const boxY = this.chartArea.y + 20;
-            
-            this.ctx.fillRect(boxX, boxY, 150, 60);
-            this.ctx.strokeRect(boxX, boxY, 150, 60);
-            
-            this.ctx.fillStyle = '#dc2626';
-            this.ctx.font = 'bold 12px sans-serif';
-            this.ctx.textAlign = 'left';
-            this.ctx.fillText('⚠️ OVERSHOOT DETECTED', boxX + 10, boxY + 20);
-            this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(`Peak: ${maxTemp.toFixed(2)}°C`, boxX + 10, boxY + 35);
-            this.ctx.fillText(`Target: ${targetTemp.toFixed(2)}°C`, boxX + 10, boxY + 50);
-            
-            this.ctx.setLineDash([]);
-        }
-    }
-
-    drawSteadyStateAnnotation() {
-        // Analyze for steady-state error
-        if (this.data.temperature.length < 20) return;
-        
-        const recentTemps = this.data.temperature.slice(-20);
-        const recentTargets = this.data.setpoint.slice(-20);
-        
-        const avgTemp = recentTemps.reduce((a, b) => a + b) / recentTemps.length;
-        const avgTarget = recentTargets.reduce((a, b) => a + b) / recentTargets.length;
-        const steadyStateError = Math.abs(avgTemp - avgTarget);
-        
-        if (steadyStateError > 0.1) {
-            this.ctx.fillStyle = 'rgba(245, 158, 11, 0.3)';
-            this.ctx.strokeStyle = '#f59e0b';
-            this.ctx.lineWidth = 2;
-            
-            const boxX = this.chartArea.x + this.chartArea.width * 0.6;
-            const boxY = this.chartArea.y + this.chartArea.height - 80;
-            
-            this.ctx.fillRect(boxX, boxY, 180, 60);
-            this.ctx.strokeRect(boxX, boxY, 180, 60);
-            
-            this.ctx.fillStyle = '#d97706';
-            this.ctx.font = 'bold 12px sans-serif';
-            this.ctx.textAlign = 'left';
-            this.ctx.fillText('📍 STEADY-STATE ERROR', boxX + 10, boxY + 20);
-            this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(`Error: ${steadyStateError.toFixed(3)}°C`, boxX + 10, boxY + 35);
-            this.ctx.fillText('Consider increasing Ki', boxX + 10, boxY + 50);
-        }
-    }
-
-    drawOscillationAnnotation() {
-        // Detect oscillatory behavior
-        if (this.data.temperature.length < 30) return;
-        
-        const recentData = this.data.temperature.slice(-30);
-        const peaks = this.findPeaks(recentData);
-        
-        if (peaks.length > 3) {
-            this.ctx.fillStyle = 'rgba(139, 92, 246, 0.3)';
-            this.ctx.strokeStyle = '#8b5cf6';
-            this.ctx.lineWidth = 2;
-            
-            const boxX = this.chartArea.x + 20;
-            const boxY = this.chartArea.y + this.chartArea.height - 80;
-            
-            this.ctx.fillRect(boxX, boxY, 160, 60);
-            this.ctx.strokeRect(boxX, boxY, 160, 60);
-            
-            this.ctx.fillStyle = '#7c3aed';
-            this.ctx.font = 'bold 12px sans-serif';
-            this.ctx.textAlign = 'left';
-            this.ctx.fillText('🌊 OSCILLATION', boxX + 10, boxY + 20);
-            this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(`${peaks.length} peaks detected`, boxX + 10, boxY + 35);
-            this.ctx.fillText('Try reducing Kp or Ki', boxX + 10, boxY + 50);
-        }
-    }
-
-    findPeaks(data) {
-        const peaks = [];
-        for (let i = 1; i < data.length - 1; i++) {
-            if (data[i] > data[i-1] && data[i] > data[i+1]) {
-                peaks.push(i);
-            }
-        }
-        return peaks;
-    }
-
-    // Educational demonstration methods
-    demonstrateStepResponse() {
-        console.log('📈 Demonstrating step response...');
-        // This would trigger a setpoint change in the control system
-        // and highlight the resulting response characteristics
-        
-        setTimeout(() => {
-            this.highlightFeature('overshoot');
-        }, 2000);
-        
-        setTimeout(() => {
-            this.highlightFeature('steady-state');
-        }, 5000);
-    }
-
-    demonstrateDisturbanceResponse() {
-        console.log('🌪️ Demonstrating disturbance response...');
-        // This would trigger a disturbance and show how the controller responds
-        
-        if (window.dashboard) {
-            window.dashboard.triggerDisturbance(1.0);
-        }
-        
-        setTimeout(() => {
-            this.highlightFeature('oscillation');
-        }, 3000);
-    }
-
-    // Export chart data for analysis
-    exportData() {
-        const chartData = {
-            timestamps: [...this.data.timestamps],
-            temperature: [...this.data.temperature],
-            setpoint: [...this.data.setpoint],
-            error: [...this.data.error],
-            output: [...this.data.output],
-            config: { ...this.config }
-        };
-        
-        const dataStr = JSON.stringify(chartData, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `temperature_data_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        console.log('📊 Chart data exported');
+    
+    start() {
+        this.isRunning = true;
+        this.startAnimationLoop();
     }
 }
 
-// Global chart functions
+// Enhanced global functions for chart controls
 function adjustTimeScale(seconds) {
     if (window.temperatureChart) {
         window.temperatureChart.setTimeWindow(seconds);
     }
     
-    // Update active button
-    document.querySelectorAll('.time-controls button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
+    if (window.dashboard) {
+        window.dashboard.chartTimeScale = seconds;
+    }
     
-    console.log(`📊 Chart time scale: ${seconds}s`);
+    console.log(`📊 Chart time scale changed to ${seconds} seconds`);
 }
 
 function clearChart() {
     if (window.temperatureChart) {
         window.temperatureChart.clear();
     }
+    console.log('🗑️ Chart data cleared');
 }
 
-function exportChartData() {
-    if (window.temperatureChart) {
-        window.temperatureChart.exportData();
-    }
-}
-
-function demonstrateStepResponse() {
-    if (window.temperatureChart) {
-        window.temperatureChart.demonstrateStepResponse();
-    }
-}
-
-function demonstrateDisturbanceResponse() {
-    if (window.temperatureChart) {
-        window.temperatureChart.demonstrateDisturbanceResponse();
-    }
-}
-
-// Initialize temperature chart when page loads
+// Initialize chart when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('temperature-chart');
-    if (canvas) {
+    // Wait a bit for other components to load
+    setTimeout(() => {
         window.temperatureChart = new TemperatureChart('temperature-chart');
         console.log('📊 Temperature Chart initialized!');
-    }
-});
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    if (window.temperatureChart) {
+        
+        // Test with some sample data if no real data is coming
         setTimeout(() => {
-            window.temperatureChart.resize();
-        }, 100);
-    }
+            if (window.temperatureChart && window.temperatureChart.data.length === 0) {
+                console.log('🧪 No real data detected, starting with sample data');
+                // This will be replaced by real data from dashboard
+            }
+        }, 2000);
+    }, 500);
 });
 
 // Export for module use
