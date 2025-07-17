@@ -22,8 +22,14 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Now import with absolute paths
-from src.control.control_interface import create_blood_storage_control_system, ControlMode
-from src.thermal_model.heat_transfer_data import MaterialLibrary
+try:
+    from ..control.control_interface import create_blood_storage_control_system, ControlMode
+    from ..thermal_model.heat_transfer_data import MaterialLibrary
+    from ..control.pid_controller import PIDGains
+except ImportError as e:
+    print(f"Import error: {e}")
+    print("Make sure you're running from the project root directory")
+    sys.exit(1)
 
 class DashboardServer:
     """Educational Dashboard Server integrating with thermal control system"""
@@ -181,7 +187,6 @@ class DashboardServer:
                     }), 400
                 
                 # Set gains in control system
-                from src.control.pid_controller import PIDGains
                 gains = PIDGains(kp=kp, ki=ki, kd=kd)
                 self.control_system.pid_controller.set_gains(gains)
                 
@@ -267,7 +272,7 @@ class DashboardServer:
                 })
                 
             except Exception as e:
-                print(f"❌ Error setting control mode: {e}")
+                print(f"Error setting control mode: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/trigger_disturbance', methods=['POST'])
@@ -299,7 +304,7 @@ class DashboardServer:
                 })
                 
             except Exception as e:
-                print(f"❌ Error triggering disturbance: {e}")
+                print(f"Error triggering disturbance: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/experiments/<experiment_type>', methods=['POST'])
@@ -318,7 +323,7 @@ class DashboardServer:
                 })
                 
             except Exception as e:
-                print(f"❌ Error running experiment: {e}")
+                print(f"Error running experiment: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/history', methods=['GET'])
@@ -341,7 +346,7 @@ class DashboardServer:
                 })
                 
             except Exception as e:
-                print(f"❌ Error getting history: {e}")
+                print(f"Error getting history: {e}")
                 return jsonify({'error': str(e)}), 500
         
         @self.app.route('/api/shutdown', methods=['POST'])
@@ -362,7 +367,7 @@ class DashboardServer:
                     return jsonify({'success': True, 'message': 'System already stopped'})
                     
             except Exception as e:
-                print(f"❌ Error shutting down: {e}")
+                print(f"Error shutting down: {e}")
                 return jsonify({'error': str(e)}), 500
     
     def setup_socketio_events(self):
@@ -474,8 +479,6 @@ class DashboardServer:
     
     def experiment_overshoot(self) -> Dict[str, Any]:
         """Demonstrate overshoot with high Kp"""
-        from src.control.pid_controller import PIDGains
-        
         # Set aggressive gains
         gains = PIDGains(kp=4.0, ki=0.1, kd=0.0)
         self.control_system.pid_controller.set_gains(gains)
@@ -494,8 +497,6 @@ class DashboardServer:
     
     def experiment_steady_state(self) -> Dict[str, Any]:
         """Demonstrate steady-state error with Ki=0"""
-        from src.control.pid_controller import PIDGains
-        
         # Set P-only control
         gains = PIDGains(kp=1.0, ki=0.0, kd=0.05)
         self.control_system.pid_controller.set_gains(gains)
@@ -509,8 +510,6 @@ class DashboardServer:
     
     def experiment_oscillation(self) -> Dict[str, Any]:
         """Demonstrate oscillation with excessive gains"""
-        from src.control.pid_controller import PIDGains
-        
         # Set unstable gains
         gains = PIDGains(kp=5.0, ki=0.8, kd=0.0)
         self.control_system.pid_controller.set_gains(gains)
