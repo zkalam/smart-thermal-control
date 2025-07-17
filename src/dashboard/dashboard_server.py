@@ -569,29 +569,212 @@ class DashboardServer:
             self.update_thread.join(timeout=2.0)
         print("Stopped real-time update thread")
     
+
     def update_loop(self):
-        """Main update loop for real-time data"""
+        """Main update loop for real-time data with enhanced thermal integration"""
+        print("Starting enhanced update loop with thermal integration...")
+        
         while not self.should_stop and self.system_running:
             try:
                 if self.control_system:
-                    # Update control system
-                    self.control_system.update(dt=1.0)  # 1 second time step
+                    # CRITICAL FIX: Force the control system to actually calculate and apply thermal power
                     
-                    # Get status and emit to connected clients
+                    # Get current temperature BEFORE update
+                    temp_before = self.control_system.get_current_temperature()
+                    
+                    # Force PID calculation with manual thermal power application
+                    current_temp = self.control_system.get_current_temperature()
+                    target_temp = self.control_system.config.target_temperature
+                    
+                    # Manual PID calculation to ensure it works
+                    error = target_temp - current_temp
+                    
+                    # Get PID gains
+                    kp = self.control_system.pid_controller.gains.kp
+                    ki = self.control_system.pid_controller.gains.ki  
+                    kd = self.control_system.pid_controller.gains.kd
+                    
+                    # Calculate PID output manually to ensure it works
+                    dt = 1.0  # 1 second time step
+                    
+                    # Proportional term
+                    p_term = kp * error
+                    
+                    # Integral term (simplified)
+                    if not hasattr(self, '_integral_accumulator'):
+                        self._integral_accumulator = 0.0
+                    self._integral_accumulator += error * dt
+                    # Prevent windup
+                    self._integral_accumulator = max(-50.0, min(50.0, self._integral_accumulator))
+                    i_term = ki * self._integral_accumulator
+                    
+                    # Derivative term
+                    if not hasattr(self, '_last_error'):
+                        self._last_error = error
+                    d_term = kd * (error - self._last_error) / dt
+                    self._last_error = error
+                    
+                    # Total PID output
+                    pid_output = p_term + i_term + d_term
+                    
+                    # Limit output to reasonable range
+                    pid_output = max(-100.0, min(100.0, pid_output))
+                    
+                    print(f"Manual PID Debug: Temp={current_temp:.2f}°C, Target={target_temp:.2f}°C, Error={error:.2f}°C, Output={pid_output:.1f}W")
+                    
+                    # FORCE thermal power application directly to the thermal system
+                    if hasattr(self.control_system, 'thermal_system'):
+                        # Apply power directly to thermal system
+                        actual_power = self.control_system.thermal_system.apply_thermal_power(pid_output)
+                        print(f"Applied thermal power: {actual_power:.1f}W")
+                        
+                        # Force thermal system step
+                        new_state = self.control_system.thermal_system.step(dt)
+                        print(f"Thermal step result: {new_state}")
+                        
+                        # Get temperature after thermal step
+                        temp_after = self.control_system.get_current_temperature()
+                        temp_change = temp_after - temp_before
+                        print(f"Temperature change: {temp_change:.4f}°C (from {temp_before:.2f} to {temp_after:.2f})")
+                    
+                    # Also run the normal control system update
+                    self.control_system.update(dt=dt)
+                    
+                    # Get enhanced status
                     status = self.control_system.get_status()
                     enhanced_status = self.enhance_status_for_education(status)
+                    
+                    # Force update the PID terms in status for display
+                    enhanced_status['pid_controller']['p_term'] = p_term
+                    enhanced_status['pid_controller']['i_term'] = i_term  
+                    enhanced_status['pid_controller']['d_term'] = d_term
+                    enhanced_status['pid_controller']['last_output_w'] = pid_output
+                    
+                    # Add thermal debugging info
+                    enhanced_status['thermal_debug'] = {
+                        'temperature_before': temp_before,
+                        'temperature_after': self.control_system.get_current_temperature(),
+                        'temperature_change': self.control_system.get_current_temperature() - temp_before,
+                        'applied_power': pid_output,
+                        'manual_calculation': True
+                    }
                     
                     # Add to history
                     self.add_to_history(enhanced_status)
                     
                     # Emit to all connected clients
                     self.socketio.emit('status_update', enhanced_status)
-                
+                    
+                    # Debug output every 5 seconds
+                    if not hasattr(self, '_debug_counter'):
+                        self._debug_counter = 0
+                    self._debug_counter += 1
+                    
+                    if self._debug_counter % 5 == 0:
+                        print(f"System Status - Temp: {current_temp:.2f}°C, Target: {target_temp:.2f}°C, Output: {pid_output:.1f}W")
+                    
                 time.sleep(1.0)  # Update every second
                 
             except Exception as e:
-                print(f"Error in update loop: {e}")
+                print(f"Error in enhanced update loop: {e}")
+                import traceback
+                traceback.print_exc()
                 time.sleep(5.0)  # Wait longer if there's an error
+
+
+    # Also add this method to check thermal system state
+    def debug_thermal_system(self):
+        """Debug the thermal system to see what's happening"""
+        if self.control_system and hasattr(self.control_system, 'thermal_system'):
+            ts = self.control_system.thermal_system
+            
+            print("=== THERMAL SYSTEM DEBUG ===")
+            print(f"Current temperature: {ts.get_current_temperature():.2f}°C")
+            
+            if hasattr(ts, 'current_state'):
+                print(f"Blood temperature: {ts.current_state.blood_temperature:.2f}°C")
+                print(f"Container temperature: {ts.current_state.container_temperature:.2f}°C")
+                print(f"Ambient temperature: {ts.current_state.ambient_temperature:.2f}°C")
+            
+            if hasattr(ts, 'actuator_limits'):
+                print(f"Max heating power: {ts.actuator_limits.max_heating_power}W")
+                print(f"Max cooling power: {ts.actuator_limits.max_cooling_power}W")
+            
+            # Try to apply a test thermal power
+            print("Testing thermal power application...")
+            test_temp_before = ts.get_current_temperature()
+            test_power = 50.0  # 50W heating
+            actual_power = ts.apply_thermal_power(test_power)
+            ts.step(1.0)  # 1 second step
+            test_temp_after = ts.get_current_temperature()
+            
+            print(f"Test: {test_power}W → {actual_power}W applied")
+            print(f"Temperature change: {test_temp_before:.2f}°C → {test_temp_after:.2f}°C ({test_temp_after - test_temp_before:.4f}°C)")
+            print("=== END DEBUG ===")
+            
+            return {
+                'before': test_temp_before,
+                'after': test_temp_after,
+                'change': test_temp_after - test_temp_before,
+                'power_applied': actual_power
+            }
+        else:
+            print("No thermal system found!")
+            return None
+
+
+    # Add this route to your DashboardServer for debugging
+    def setup_debug_routes(self):
+        """Add debug routes to diagnose thermal issues"""
+        
+        @self.app.route('/api/debug/thermal', methods=['GET'])
+        def debug_thermal():
+            """Debug thermal system state"""
+            try:
+                result = self.debug_thermal_system()
+                return jsonify({
+                    'success': True,
+                    'debug_result': result,
+                    'thermal_system_exists': hasattr(self.control_system, 'thermal_system') if self.control_system else False,
+                    'system_running': self.system_running
+                })
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/debug/force_temp_change', methods=['POST'])
+        def force_temp_change():
+            """Force a temperature change for testing"""
+            try:
+                data = request.get_json() or {}
+                power = float(data.get('power', 50.0))
+                duration = float(data.get('duration', 5.0))
+                
+                if not self.control_system:
+                    return jsonify({'error': 'System not running'}), 400
+                
+                print(f"Forcing temperature change with {power}W for {duration}s...")
+                
+                temp_before = self.control_system.get_current_temperature()
+                
+                # Apply power for specified duration
+                for i in range(int(duration)):
+                    actual_power = self.control_system.thermal_system.apply_thermal_power(power)
+                    self.control_system.thermal_system.step(1.0)
+                    time.sleep(0.1)  # Small delay
+                
+                temp_after = self.control_system.get_current_temperature()
+                
+                return jsonify({
+                    'success': True,
+                    'power_applied': power,
+                    'duration': duration,
+                    'temperature_before': temp_before,
+                    'temperature_after': temp_after,
+                    'temperature_change': temp_after - temp_before
+                })
+                
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
     
     def run(self, host='127.0.0.1', port=5000, debug=False):
         """Run the dashboard server"""
