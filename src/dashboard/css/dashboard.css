@@ -288,10 +288,13 @@ body {
     background: #ddd;
     border-radius: 4px;
     outline: none;
+    appearance: none;
     -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
 .slider-container input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
@@ -302,6 +305,8 @@ body {
 }
 
 .slider-container input[type="range"]::-moz-range-thumb {
+    appearance: none;
+    -moz-appearance: none;
     width: 20px;
     height: 20px;
     background: var(--edu-primary);
