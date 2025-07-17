@@ -4,19 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Thermal Control System - Educational Dashboard</title>
+    
+    <!-- Preload and load fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/components.css">
+    
+    <!-- Meta tags for better dark theme support -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="color-scheme" content="dark">
 </head>
 <body>
     <!-- Header -->
     <header class="dashboard-header">
         <div class="header-content">
-            <h1>🏥 Smart Thermal Control System</h1>
-            <p class="subtitle">Interactive Control Systems Learning Platform</p>
+            <div class="header-left">
+                <h1>🏥 Smart Thermal Control System</h1>
+                <p class="subtitle">Interactive Control Systems Learning Platform</p>
+            </div>
             <div class="system-status">
-                <span class="status-indicator safe" id="safety-status">SAFE</span>
-                <span class="connection-status" id="connection-status">Disconnected</span>
-                <button class="init-button" onclick="initializeSystemFromUI()">Initialize System</button>
+                <div class="status-indicators">
+                    <span class="status-indicator safe" id="safety-status">
+                        <span class="status-dot online"></span>
+                        SAFE
+                    </span>
+                    <span class="connection-status disconnected" id="connection-status">
+                        <span class="status-dot offline"></span>
+                        Disconnected
+                    </span>
+                </div>
+                <button class="init-button" onclick="initializeSystemFromUI()" id="init-button">
+                    Initialize System
+                </button>
             </div>
         </div>
     </header>
@@ -42,8 +65,9 @@
                         <span class="unit">°C</span>
                     </div>
                     <div class="target-controls">
-                        <input type="range" id="target-slider" min="1.0" max="6.0" step="0.1" value="4.0">
-                        <button onclick="setTargetFromSlider()">Set Target</button>
+                        <input type="range" id="target-slider" min="1.0" max="6.0" step="0.1" value="4.0" 
+                               aria-label="Target temperature slider">
+                        <button onclick="setTargetFromSlider()" class="target-button">Set Target</button>
                     </div>
                 </div>
                 <div class="status-item">
@@ -86,10 +110,12 @@
                 <div class="pid-parameter">
                     <label for="kp-slider">
                         Proportional Gain (Kp)
-                        <span class="help-icon" data-tooltip="Controls how aggressively the system responds to current error">ℹ️</span>
+                        <span class="help-icon" data-tooltip="Controls how aggressively the system responds to current error" 
+                              tabindex="0" role="button" aria-label="Help for Proportional Gain">ℹ️</span>
                     </label>
                     <div class="slider-container">
-                        <input type="range" id="kp-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+                        <input type="range" id="kp-slider" min="0.1" max="5.0" step="0.1" value="1.0" 
+                               aria-label="Proportional gain slider">
                         <span class="slider-value" id="kp-value">1.0</span>
                     </div>
                     <div class="parameter-explanation">
@@ -100,10 +126,12 @@
                 <div class="pid-parameter">
                     <label for="ki-slider">
                         Integral Gain (Ki)
-                        <span class="help-icon" data-tooltip="Eliminates steady-state error by responding to accumulated error over time">ℹ️</span>
+                        <span class="help-icon" data-tooltip="Eliminates steady-state error by responding to accumulated error over time" 
+                              tabindex="0" role="button" aria-label="Help for Integral Gain">ℹ️</span>
                     </label>
                     <div class="slider-container">
-                        <input type="range" id="ki-slider" min="0.0" max="1.0" step="0.01" value="0.1">
+                        <input type="range" id="ki-slider" min="0.0" max="1.0" step="0.01" value="0.1" 
+                               aria-label="Integral gain slider">
                         <span class="slider-value" id="ki-value">0.1</span>
                     </div>
                     <div class="parameter-explanation">
@@ -114,10 +142,12 @@
                 <div class="pid-parameter">
                     <label for="kd-slider">
                         Derivative Gain (Kd)
-                        <span class="help-icon" data-tooltip="Provides damping by responding to the rate of error change">ℹ️</span>
+                        <span class="help-icon" data-tooltip="Provides damping by responding to the rate of error change" 
+                              tabindex="0" role="button" aria-label="Help for Derivative Gain">ℹ️</span>
                     </label>
                     <div class="slider-container">
-                        <input type="range" id="kd-slider" min="0.0" max="0.5" step="0.005" value="0.05">
+                        <input type="range" id="kd-slider" min="0.0" max="0.5" step="0.005" value="0.05" 
+                               aria-label="Derivative gain slider">
                         <span class="slider-value" id="kd-value">0.05</span>
                     </div>
                     <div class="parameter-explanation">
@@ -127,25 +157,41 @@
             </div>
 
             <div class="preset-buttons">
-                <button class="preset-btn" data-preset="conservative">Conservative Tuning</button>
-                <button class="preset-btn" data-preset="aggressive">Aggressive Tuning</button>
-                <button class="preset-btn" data-preset="medical">Medical Grade</button>
+                <button class="preset-btn" data-preset="conservative" 
+                        aria-label="Apply conservative PID tuning preset">Conservative Tuning</button>
+                <button class="preset-btn" data-preset="aggressive" 
+                        aria-label="Apply aggressive PID tuning preset">Aggressive Tuning</button>
+                <button class="preset-btn" data-preset="medical" 
+                        aria-label="Apply medical grade PID tuning preset">Medical Grade</button>
             </div>
 
             <div class="try-this-section">
                 <h3>🧪 Try This Experiment:</h3>
                 <div class="experiment-card" id="current-experiment">
                     <p><strong>Experiment 1:</strong> Increase Kp to 3.0 and observe what happens to the system response. Do you see overshoot?</p>
-                    <button class="try-button" onclick="tryExperiment(1)">Try It!</button>
+                    <button class="try-button" onclick="tryExperiment(1)" 
+                            aria-label="Start experiment 1">Try It!</button>
                 </div>
                 
                 <div class="experiment-controls">
                     <h4>🎛️ Real System Controls:</h4>
                     <div class="control-buttons">
-                        <button onclick="triggerDisturbanceFromUI(2.0)">🌪️ Door Opening (+2°C)</button>
-                        <button onclick="runExperimentFromUI('overshoot')">📈 Overshoot Demo</button>
-                        <button onclick="runExperimentFromUI('steady_state')">📍 Steady-State Demo</button>
-                        <button onclick="runExperimentFromUI('oscillation')">🌊 Oscillation Demo</button>
+                        <button onclick="triggerDisturbanceFromUI(2.0)" class="control-btn disturbance-btn" 
+                                aria-label="Simulate door opening disturbance">
+                            🌪️ Door Opening (+2°C)
+                        </button>
+                        <button onclick="runExperimentFromUI('overshoot')" class="control-btn experiment-btn" 
+                                aria-label="Run overshoot demonstration">
+                            📈 Overshoot Demo
+                        </button>
+                        <button onclick="runExperimentFromUI('steady_state')" class="control-btn experiment-btn" 
+                                aria-label="Run steady-state demonstration">
+                            📍 Steady-State Demo
+                        </button>
+                        <button onclick="runExperimentFromUI('oscillation')" class="control-btn experiment-btn" 
+                                aria-label="Run oscillation demonstration">
+                            🌊 Oscillation Demo
+                        </button>
                     </div>
                 </div>
             </div>
@@ -158,7 +204,7 @@
             <div class="concept-display">
                 <div class="equation-box">
                     <h3>PID Equation:</h3>
-                    <div class="equation">
+                    <div class="equation" role="img" aria-label="PID control equation">
                         u(t) = K<sub>p</sub>e(t) + K<sub>i</sub>∫e(t)dt + K<sub>d</sub>(de/dt)
                     </div>
                     <div class="equation-explanation">
@@ -171,22 +217,22 @@
                     <div class="pid-terms">
                         <div class="term proportional">
                             <label>P Term:</label>
-                            <span id="p-term-value">-0.8</span>
-                            <div class="term-bar">
+                            <span id="p-term-value" class="term-value">-0.8</span>
+                            <div class="term-bar" role="progressbar" aria-label="Proportional term magnitude">
                                 <div class="term-fill p-fill" style="width: 40%"></div>
                             </div>
                         </div>
                         <div class="term integral">
                             <label>I Term:</label>
-                            <span id="i-term-value">-0.2</span>
-                            <div class="term-bar">
+                            <span id="i-term-value" class="term-value">-0.2</span>
+                            <div class="term-bar" role="progressbar" aria-label="Integral term magnitude">
                                 <div class="term-fill i-fill" style="width: 20%"></div>
                             </div>
                         </div>
                         <div class="term derivative">
                             <label>D Term:</label>
-                            <span id="d-term-value">0.1</span>
-                            <div class="term-bar">
+                            <span id="d-term-value" class="term-value">0.1</span>
+                            <div class="term-bar" role="progressbar" aria-label="Derivative term magnitude">
                                 <div class="term-fill d-fill" style="width: 10%"></div>
                             </div>
                         </div>
@@ -207,26 +253,40 @@
             <h2>📊 Real-Time System Response</h2>
             
             <div class="chart-container">
-                <canvas id="temperature-chart" width="800" height="300"></canvas>
+                <canvas id="temperature-chart" width="800" height="300" 
+                        aria-label="Real-time temperature and control data chart"></canvas>
             </div>
             
             <div class="chart-controls">
                 <div class="chart-options">
-                    <label>
-                        <input type="checkbox" id="show-setpoint" checked> Show Setpoint
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-setpoint" checked 
+                               aria-label="Toggle setpoint display on chart"> 
+                        <span class="checkmark"></span>
+                        Show Setpoint
                     </label>
-                    <label>
-                        <input type="checkbox" id="show-error" checked> Show Error
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-error" checked 
+                               aria-label="Toggle error display on chart"> 
+                        <span class="checkmark"></span>
+                        Show Error
                     </label>
-                    <label>
-                        <input type="checkbox" id="show-output" checked> Show Control Output
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-output" checked 
+                               aria-label="Toggle control output display on chart"> 
+                        <span class="checkmark"></span>
+                        Show Control Output
                     </label>
                 </div>
                 <div class="time-controls">
-                    <button onclick="adjustTimeScale(30)">30s</button>
-                    <button onclick="adjustTimeScale(60)" class="active">1m</button>
-                    <button onclick="adjustTimeScale(300)">5m</button>
-                    <button onclick="clearChart()">Clear</button>
+                    <button onclick="adjustTimeScale(30)" class="time-btn" 
+                            aria-label="Set chart time scale to 30 seconds">30s</button>
+                    <button onclick="adjustTimeScale(60)" class="time-btn active" 
+                            aria-label="Set chart time scale to 1 minute">1m</button>
+                    <button onclick="adjustTimeScale(300)" class="time-btn" 
+                            aria-label="Set chart time scale to 5 minutes">5m</button>
+                    <button onclick="clearChart()" class="time-btn clear-btn" 
+                            aria-label="Clear chart data">Clear</button>
                 </div>
             </div>
         </div>
@@ -237,7 +297,7 @@
             
             <div class="safety-explanation">
                 <div class="safety-level-display">
-                    <div class="safety-indicator safe">
+                    <div class="safety-indicator safe" id="main-safety-indicator">
                         <span class="level">SAFE</span>
                         <span class="description">All parameters within normal ranges</span>
                     </div>
@@ -245,28 +305,28 @@
 
                 <div class="safety-limits">
                     <h3>Blood Storage Safety Limits:</h3>
-                    <div class="limits-display">
-                        <div class="limit-item critical-high">
+                    <div class="limits-display" role="list" aria-label="Temperature safety limits for blood storage">
+                        <div class="limit-item critical-high" role="listitem">
                             <label>Critical High:</label>
                             <span>6.0°C</span>
                             <small>FDA maximum for whole blood</small>
                         </div>
-                        <div class="limit-item warning-high">
+                        <div class="limit-item warning-high" role="listitem">
                             <label>Warning High:</label>
                             <span>5.0°C</span>
                             <small>Early warning threshold</small>
                         </div>
-                        <div class="limit-item target">
+                        <div class="limit-item target" role="listitem">
                             <label>Target:</label>
                             <span>4.0°C</span>
                             <small>Optimal storage temperature</small>
                         </div>
-                        <div class="limit-item warning-low">
+                        <div class="limit-item warning-low" role="listitem">
                             <label>Warning Low:</label>
                             <span>2.0°C</span>
                             <small>Early warning threshold</small>
                         </div>
-                        <div class="limit-item critical-low">
+                        <div class="limit-item critical-low" role="listitem">
                             <label>Critical Low:</label>
                             <span>1.0°C</span>
                             <small>FDA minimum for whole blood</small>
@@ -276,11 +336,19 @@
 
                 <div class="why-safety-matters">
                     <h3>🩸 Why Precise Control Matters:</h3>
-                    <ul>
-                        <li><strong>Blood Cell Integrity:</strong> Temperatures outside 1-6°C can damage red blood cells</li>
-                        <li><strong>Bacterial Growth:</strong> Higher temperatures promote dangerous bacterial growth</li>
-                        <li><strong>Freezing Damage:</strong> Below 1°C can cause cell membrane rupture</li>
-                        <li><strong>Patient Safety:</strong> Damaged blood products can harm patients</li>
+                    <ul role="list">
+                        <li role="listitem">
+                            <strong>Blood Cell Integrity:</strong> Temperatures outside 1-6°C can damage red blood cells
+                        </li>
+                        <li role="listitem">
+                            <strong>Bacterial Growth:</strong> Higher temperatures promote dangerous bacterial growth
+                        </li>
+                        <li role="listitem">
+                            <strong>Freezing Damage:</strong> Below 1°C can cause cell membrane rupture
+                        </li>
+                        <li role="listitem">
+                            <strong>Patient Safety:</strong> Damaged blood products can harm patients
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -288,8 +356,16 @@
 
     </div>
 
-    <!-- Tooltip Container -->
-    <div id="tooltip" class="tooltip"></div>
+    <!-- Loading indicator for better UX -->
+    <div id="loading-indicator" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Initializing System...</p>
+        </div>
+    </div>
+
+    <!-- Enhanced Tooltip Container -->
+    <div id="tooltip" class="tooltip" role="tooltip"></div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
@@ -298,5 +374,61 @@
     <script src="js/control-theory.js"></script>
     <script src="js/temperature-chart.js"></script>
     <script src="js/data-connector.js"></script>
+    
+    <!-- Initialize dark theme on load -->
+    <script>
+        // Set theme preference and initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply dark theme class to body for any JS that needs it
+            document.body.classList.add('dark-theme');
+            
+            // Initialize tooltips
+            initializeTooltips();
+            
+            // Initialize status dots animation
+            initializeStatusDots();
+        });
+        
+        function initializeTooltips() {
+            const helpIcons = document.querySelectorAll('.help-icon');
+            const tooltip = document.getElementById('tooltip');
+            
+            helpIcons.forEach(icon => {
+                icon.addEventListener('mouseenter', (e) => {
+                    const tooltipText = e.target.getAttribute('data-tooltip');
+                    tooltip.textContent = tooltipText;
+                    tooltip.classList.add('visible');
+                    positionTooltip(e, tooltip);
+                });
+                
+                icon.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+                
+                icon.addEventListener('mousemove', (e) => {
+                    positionTooltip(e, tooltip);
+                });
+            });
+        }
+        
+        function positionTooltip(event, tooltip) {
+            const rect = tooltip.getBoundingClientRect();
+            const x = event.clientX + 10;
+            const y = event.clientY - rect.height - 10;
+            
+            tooltip.style.left = Math.min(x, window.innerWidth - rect.width - 10) + 'px';
+            tooltip.style.top = Math.max(y, 10) + 'px';
+        }
+        
+        function initializeStatusDots() {
+            // Add pulse animation to status dots when status changes
+            const statusDots = document.querySelectorAll('.status-dot');
+            statusDots.forEach(dot => {
+                dot.addEventListener('animationend', () => {
+                    dot.classList.remove('pulse');
+                });
+            });
+        }
+    </script>
 </body>
 </html>
