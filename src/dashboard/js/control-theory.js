@@ -1,5 +1,5 @@
 /**
- * Control Theory Educational Engine
+ * Control Theory Educational Engine - Dark Theme Version
  * Provides dynamic educational content and explanations for control systems concepts
  */
 
@@ -362,11 +362,11 @@ class ControlTheoryEducator {
     }
 
     showConceptModal(concept) {
-        // Create educational modal
+        // Create educational modal with dark theme styling
         const modal = document.createElement('div');
-        modal.className = 'concept-modal';
+        modal.className = 'concept-modal modal-overlay';
         modal.innerHTML = `
-            <div class="concept-modal-content">
+            <div class="concept-modal-content modal-content">
                 <div class="concept-header">
                     <h2>${concept.title}</h2>
                     <button class="close-modal" onclick="this.closest('.concept-modal').remove()">×</button>
@@ -376,7 +376,7 @@ class ControlTheoryEducator {
                     <div class="definition-section">
                         <h3>📋 Definition</h3>
                         <p>${concept.definition}</p>
-                        ${concept.formula ? `<div class="formula">Formula: <code>${concept.formula}</code></div>` : ''}
+                        ${concept.formula ? `<div class="formula-dark">Formula: <code>${concept.formula}</code></div>` : ''}
                     </div>
                     
                     ${concept.realWorld ? `
@@ -420,31 +420,10 @@ class ControlTheoryEducator {
             </div>
         `;
         
-        // Style the modal
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        `;
-        
-        modal.querySelector('.concept-modal-content').style.cssText = `
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        `;
-        
         document.body.appendChild(modal);
+        
+        // Add entrance animation
+        setTimeout(() => modal.classList.add('modal-visible'), 10);
     }
 
     demonstrateConcept(conceptKey) {
@@ -583,106 +562,410 @@ class ControlTheoryEducator {
     }
 }
 
-// Add concept navigation button styles
-const conceptStyles = document.createElement('style');
-conceptStyles.textContent = `
+// Add dark theme concept navigation and modal styles
+const darkConceptStyles = document.createElement('style');
+darkConceptStyles.textContent = `
+    /* Dark Theme Concept Navigation */
     .concept-navigation {
-        margin-top: 20px;
-        padding: 20px;
-        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-        border-radius: 8px;
+        margin-top: var(--space-lg);
+        padding: var(--space-lg);
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
         border-left: 4px solid var(--edu-primary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .concept-navigation h3 {
+        color: var(--text-accent);
+        margin-bottom: var(--space-md);
+        font-weight: 700;
+        letter-spacing: -0.01em;
     }
     
     .concept-buttons {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: var(--space-sm);
+        margin-top: var(--space-md);
     }
     
     .concept-buttons button {
-        padding: 8px 12px;
+        padding: var(--space-sm) var(--space-md);
         background: var(--edu-primary);
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: var(--border-radius);
         cursor: pointer;
-        font-size: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
         transition: all 0.2s ease;
+        letter-spacing: 0.01em;
     }
     
     .concept-buttons button:hover {
         background: var(--edu-secondary);
         transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
     
-    .formula {
-        background: #f8fafc;
-        padding: 10px;
-        border-radius: 6px;
-        font-family: monospace;
-        margin: 10px 0;
+    /* Dark Theme Modal Styles */
+    .modal-overlay {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .modal-visible {
+        opacity: 1;
+    }
+    
+    .modal-content {
+        background: var(--bg-panel) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color) !important;
+        max-width: 700px !important;
+        max-height: 85vh !important;
+    }
+    
+    /* Dark Theme Formula Styling */
+    .formula-dark {
+        background: var(--bg-dark);
+        color: var(--text-primary);
+        padding: var(--space-md);
+        border-radius: var(--border-radius);
+        font-family: 'JetBrains Mono', monospace;
+        margin: var(--space-md) 0;
         border-left: 3px solid var(--edu-primary);
+        border: 1px solid var(--border-color);
     }
     
+    .formula-dark code {
+        background: transparent;
+        color: var(--text-accent);
+        font-weight: 600;
+        font-size: 1.1rem;
+        letter-spacing: 0.02em;
+    }
+    
+    /* Dark Theme Modal Header */
     .concept-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 15px;
+        margin-bottom: var(--space-lg);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: var(--space-md);
+    }
+    
+    .concept-header h2 {
+        color: var(--text-accent);
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: -0.01em;
     }
     
     .close-modal {
-        background: #ef4444;
+        background: var(--critical-red);
         color: white;
         border: none;
         border-radius: 50%;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         cursor: pointer;
         font-size: 18px;
         font-weight: bold;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .close-modal:hover {
+        background: var(--emergency-red);
+        transform: scale(1.1);
+    }
+    
+    /* Dark Theme Modal Body */
+    .concept-body {
+        color: var(--text-primary);
     }
     
     .concept-body h3 {
-        color: var(--edu-primary);
-        margin-top: 20px;
-        margin-bottom: 10px;
+        color: var(--text-accent);
+        margin-top: var(--space-lg);
+        margin-bottom: var(--space-md);
+        font-weight: 700;
+        letter-spacing: -0.01em;
     }
     
+    .concept-body p {
+        color: var(--text-primary);
+        line-height: 1.6;
+        margin-bottom: var(--space-md);
+    }
+    
+    .concept-body ul {
+        color: var(--text-secondary);
+        padding-left: var(--space-lg);
+    }
+    
+    .concept-body li {
+        margin-bottom: var(--space-sm);
+        line-height: 1.5;
+    }
+    
+    /* Dark Theme Modal Sections */
+    .definition-section,
+    .real-world-section,
+    .medical-section,
+    .key-points-section,
+    .mistakes-section {
+        background: var(--bg-secondary);
+        padding: var(--space-lg);
+        border-radius: var(--border-radius);
+        margin-bottom: var(--space-lg);
+        border: 1px solid var(--border-color);
+    }
+    
+    .medical-section {
+        background: rgba(16, 185, 129, 0.1);
+        border-left: 4px solid var(--safe-green);
+    }
+    
+    .mistakes-section {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 4px solid var(--warning-yellow);
+    }
+    
+    /* Dark Theme Action Section */
     .action-section {
-        margin-top: 25px;
+        margin-top: var(--space-xl);
         text-align: center;
-        padding-top: 20px;
-        border-top: 1px solid #e5e7eb;
+        padding-top: var(--space-lg);
+        border-top: 1px solid var(--border-color);
     }
     
     .action-section button {
         background: linear-gradient(135deg, var(--edu-primary), var(--edu-secondary));
         color: white;
         border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
+        padding: var(--space-md) var(--space-xl);
+        border-radius: var(--border-radius);
         cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 0.9rem;
         transition: all 0.2s ease;
+        letter-spacing: 0.01em;
     }
     
     .action-section button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+    
+    /* Dark Theme Concept Explanation */
+    .concept-explanation {
+        background: var(--bg-panel);
+        padding: var(--space-lg);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    }
+    
+    .concept-explanation h4 {
+        color: var(--text-accent);
+        margin-bottom: var(--space-md);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+    
+    .concept-explanation p {
+        color: var(--text-primary);
+        margin-bottom: var(--space-sm);
+        line-height: 1.6;
+    }
+    
+    .concept-explanation strong {
+        color: var(--text-accent);
+        font-weight: 700;
+    }
+    
+    .key-points,
+    .solutions {
+        margin-top: var(--space-md);
+    }
+    
+    .key-points strong,
+    .solutions strong {
+        color: var(--text-accent);
+        font-weight: 700;
+        display: block;
+        margin-bottom: var(--space-sm);
+    }
+    
+    .key-points ul,
+    .solutions ul {
+        color: var(--text-secondary);
+        padding-left: var(--space-lg);
+        margin: 0;
+    }
+    
+    .key-points li,
+    .solutions li {
+        margin-bottom: var(--space-xs);
+        line-height: 1.5;
+    }
+    
+    /* Responsive Design for Modals */
+    @media (max-width: 768px) {
+        .modal-content {
+            max-width: 95vw !important;
+            max-height: 95vh !important;
+            margin: var(--space-md) !important;
+        }
+        
+        .concept-buttons {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
+    /* Enhanced scrollbar for modal content */
+    .modal-content::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .modal-content::-webkit-scrollbar-track {
+        background: var(--bg-dark);
+        border-radius: 4px;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb {
+        background: var(--border-light);
+        border-radius: 4px;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb:hover {
+        background: var(--text-accent);
+    }
+    
+    /* Animation for concept explanations */
+    .concept-explanation {
+        animation: slideInUp 0.4s ease-out;
+    }
+    
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Enhanced modal entrance animation */
+    .concept-modal {
+        animation: modalFadeIn 0.3s ease-out;
+    }
+    
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+        }
+        to {
+            opacity: 1;
+            backdrop-filter: blur(8px);
+        }
+    }
+    
+    .modal-content {
+        animation: modalSlideIn 0.4s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    
+    /* Dark theme focus indicators */
+    .concept-buttons button:focus,
+    .action-section button:focus,
+    .close-modal:focus {
+        outline: 2px solid var(--edu-primary);
+        outline-offset: 2px;
+    }
+    
+    /* Loading state for concept buttons */
+    .concept-buttons button:active {
+        transform: translateY(0);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Enhanced tooltip for dark theme */
+    .concept-tooltip {
+        position: absolute;
+        background: var(--bg-dark);
+        color: var(--text-primary);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--border-radius);
+        font-size: 0.8rem;
+        max-width: 200px;
+        z-index: 1001;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-color);
+    }
+    
+    .concept-tooltip.visible {
+        opacity: 1;
+    }
+    
+    /* Status indicators in concept explanations */
+    .concept-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .concept-status.beginner {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--safe-green);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .concept-status.intermediate {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning-yellow);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .concept-status.advanced {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--critical-red);
+        border: 1px solid rgba(239, 68, 68, 0.3);
     }
 `;
-document.head.appendChild(conceptStyles);
+
+document.head.appendChild(darkConceptStyles);
 
 // Initialize Control Theory Educator when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.controlTheory = new ControlTheoryEducator();
-    console.log('📚 Control Theory Educator initialized!');
+    console.log('📚 Control Theory Educator initialized with dark theme!');
 });
 
 // Export for module use
